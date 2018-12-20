@@ -1,0 +1,66 @@
+.tile-title {
+    -fx-font-size: 1.3em;
+    -fx-text-fill: gray;
+    -fx-padding: 5;
+}
+
+.tile {
+    -fx-padding: 5 5 5 10;
+}
+
+.table {
+    -fx-vgap: 1.5;
+    -fx-hgap: 1.5;
+    -fx-alignment: top-center;
+}
+
+.table .cell {
+    -fx-background-color: white;
+    -fx-padding: 4 5 3 5;
+}
+
+.table .header {
+    -fx-font-weight: bold;
+}
+
+.table .cell.highlighted {
+    -fx-background-color: lightskyblue !important;
+}
+
+
+.confusionMatrix .header.arrow {
+    -fx-font-size: 1.8em;
+    -fx-padding: -10 3 -10 10;
+}
+
+.confusionMatrix .cell.diagonal {
+    -fx-background-color: palegreen;
+}
+
+.confusionMatrix .label-sum {
+    -fx-font-style: italic;
+    -fx-text-fill: gray;
+}
+
+.confusionMatrix .label-sum-total {
+    -fx-font-weight: bold;
+}
+
+.confusionMatrix .legend-left {
+    -fx-font-style: italic;
+    -fx-padding: 0;
+    -fx-rotate: -90;
+}
+
+.confusionMatrix .legend-top {
+    -fx-font-style: italic;
+    -fx-padding: 0;
+}
+
+.confusionMatrix .settings {
+    -fx-font-style: italic;
+    -fx-text-fill: gray;
+    -fx-text-alignment: right;
+    -fx-padding: 8 3 3 3;
+}
+

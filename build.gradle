@@ -1,0 +1,124 @@
+plugins {
+	id 'com.github.ben-manes.versions' version '0.17.0' apply false // find outdated dependencies
+	id 'com.github.johnrengelman.shadow' version '2.0.4' apply false // fat-jar
+}
+
+
+def rootBuildDir = new File(rootDir, 'build')
+
+
+allprojects {
+
+	// task to determine which dependencies have updates
+	apply plugin: 'com.github.ben-manes.versions'
+
+	// ignore pre-release-versions in check for updates (see https://github.com/ben-manes/gradle-versions-plugin)
+	dependencyUpdates.resolutionStrategy = {
+		componentSelection { rules ->
+			rules.all { selection ->
+				boolean rejected = ['alpha', 'beta', 'rc', 'cr', 'm'].any { qualifier ->
+					selection.candidate.version ==~ /(?i).*[.-]${qualifier}[.\d-]*/
+				}
+				if (rejected) {
+					selection.reject('Release candidate')
+				}
+			}
+		}
+	}
+
+
+	// prepend default group-name with 'de.panbytes.' and ensure occurence of 'dexter'	
+	group = 'de.brainbytes.' + (group.isEmpty()?'dexter':'') + group.toLowerCase()
+
+}
+
+
+subprojects {
+
+	apply plugin: 'java'
+	
+	apply plugin: 'com.github.johnrengelman.shadow' // for fat-jars
+
+	apply plugin: 'groovy' // for Spock testing-framework
+
+	/*
+	 * reroute JARs to build-folder inside root. 
+	 */
+	tasks.withType(Jar) {
+		// get the relative path between the rootProject and the current subProject's parent.
+		def relative = rootDir.toPath().relativize(projectDir.parentFile.toPath())
+		// create a build-folder and introduce the relative path-structure.
+		destinationDir = file(new File(rootBuildDir, relative.toString()))
+	}
+	
+	/*
+	 * configure shadow-plugin
+	 */
+	shadowJar {
+		// remove the "-all" suffix from the JAR's filename.
+		classifier = ''
+	}
+	// replace jar with shadowJar: make it depend on shadow, but skip the original jar.
+	jar.dependsOn(shadowJar);
+	tasks.jar.enabled = false
+	
+
+	/* 
+	 * setup project-folders following java-conventions 
+	 */
+	task createSourceFolders {
+		group 'build setup'
+		description 'Creates Folders for all sourceSets.'
+		doLast{
+			sourceSets.all { 
+				set -> set.allSource.srcDirs.each {it.mkdirs()}
+			}
+		}
+	}
+
+	repositories {
+		mavenCentral()
+		mavenLocal()
+		maven { url 'https://jitpack.io' }
+	}
+
+	dependencies {
+		compile 'com.google.guava:guava:+'
+		compile group: 'io.reactivex.rxjava2', name: 'rxjava', version: '2+'
+
+
+//		compile 'de.brainbytes.common:Papaya'
+		compile 'com.github.brainbytes42:papaya:master-SNAPSHOT'
+
+
+		// Logging( SLF4J & Logback )
+		compile 'org.slf4j:slf4j-api:1.7.+'
+		compile 'org.slf4j:jul-to-slf4j:1.7.+' // Capture Java-Logging-Output to SLF4J  
+		runtime 'ch.qos.logback:logback-classic:1.2.+'
+		
+		// Testing
+		testCompile 'junit:junit:4.+'
+		testCompile 'org.mockito:mockito-core:2.+'
+		testCompile 'pl.pragmatists:JUnitParams:1.+'
+		testCompile 'org.hamcrest:hamcrest-library:1.+'
+
+        // dependencies for using Spock
+        testCompile "org.codehaus.groovy:groovy-all:2.4.+"
+        testCompile "org.spockframework:spock-core:1.1-groovy-2.4"
+	}
+
+}
+
+
+/*
+ * define a clean-task for root project.
+ */
+task clean(type: Delete){
+	group 'build'
+	description 'Delete root build-folder'
+	doFirst{
+		delete rootBuildDir
+	}
+}
+
+

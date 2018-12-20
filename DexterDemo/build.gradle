@@ -1,0 +1,9 @@
+version = '0.0.1-SNAPSHOT'
+
+apply plugin: 'application'
+mainClassName = 'de.panbytes.dexter.v2.demo.DexterDemo'
+
+dependencies {
+    compile project(':DexterAppFX')
+    compile 'com.github.jeffgriffith:mnist-reader:master-SNAPSHOT'
+}

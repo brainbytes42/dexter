@@ -1,0 +1,32 @@
+# gradle cache
+/.gradle/
+
+# target-folders for generated files
+bin/
+target/
+build/
+dist/
+out/
+
+# files for Eclipse
+.settings/
+.classpath
+.project
+
+# files for IntelliJ
+.idea/
+.iml
+.iws
+.ipr
+
+# files for NetBeans
+nbproject/
+nbbuild/
+nbdist/
+nbactions.xml
+nb-configuration.xml
+
+# misc
+thumbs.db
+*.pmd
+/.temp

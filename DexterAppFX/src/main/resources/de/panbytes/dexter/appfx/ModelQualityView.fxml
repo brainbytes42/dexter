@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.RowConstraints?>
+
+<ScrollPane prefHeight="800.0" prefWidth="1100.0" xmlns="http://javafx.com/javafx/8.0.172-ea" xmlns:fx="http://javafx.com/fxml/1" fx:controller="de.panbytes.dexter.appfx.ModelQualityView">
+   <content>
+      <GridPane alignment="TOP_CENTER" stylesheets="@ModelQualityView.css">
+         <children>
+            <Label styleClass="tile-title" text="Confusion Matrix" />
+            <BorderPane fx:id="confusionMatrixPane" styleClass="tile" GridPane.rowIndex="1" />
+            <Label styleClass="tile-title" text="Class Representation" GridPane.columnIndex="1" />
+            <BorderPane fx:id="dataSetOverviewPane" styleClass="tile" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+            <Label styleClass="tile-title" text="Accuracy Measures" GridPane.rowIndex="2" />
+            <BorderPane fx:id="modelEvaluationPane" styleClass="tile" GridPane.rowIndex="3" />
+            <Label styleClass="tile-title" text="Classification uncertainties" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+            <BorderPane fx:id="uncertaintyPane" styleClass="tile" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+         </children>
+         <columnConstraints>
+            <ColumnConstraints halignment="CENTER" hgrow="ALWAYS" minWidth="350.0" />
+            <ColumnConstraints halignment="CENTER" hgrow="ALWAYS" minWidth="350.0" />
+            <ColumnConstraints maxWidth="5.0" minWidth="0.0" prefWidth="0.0" />
+         </columnConstraints>
+         <rowConstraints>
+            <RowConstraints minHeight="10.0" />
+            <RowConstraints minHeight="10.0" valignment="TOP" vgrow="ALWAYS" />
+            <RowConstraints minHeight="10.0" />
+            <RowConstraints minHeight="10.0" valignment="TOP" vgrow="ALWAYS" />
+         </rowConstraints>
+      </GridPane>
+   </content>
+</ScrollPane>

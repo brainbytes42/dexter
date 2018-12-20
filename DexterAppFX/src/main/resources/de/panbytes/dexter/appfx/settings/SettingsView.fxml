@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.TitledPane?>
+<?import javafx.scene.control.TreeView?>
+<?import javafx.scene.layout.BorderPane?>
+
+<BorderPane xmlns="http://javafx.com/javafx/8.0.121" xmlns:fx="http://javafx.com/fxml/1" fx:controller="de.panbytes.dexter.appfx.settings.SettingsView">
+   <left>
+      <TreeView fx:id="settingsTree" prefHeight="500.0" prefWidth="200.0" showRoot="false" BorderPane.alignment="CENTER" />
+   </left>
+   <center>
+      <TitledPane fx:id="settingsViewContainer" collapsible="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="500.0" prefWidth="600.0" text="Settings" BorderPane.alignment="CENTER" />
+   </center>
+</BorderPane>

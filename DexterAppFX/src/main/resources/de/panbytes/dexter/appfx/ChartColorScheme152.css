@@ -1,0 +1,159 @@
+/*
+Colors from:
+https://sashat.me/2017/01/11/list-of-20-simple-distinct-colors/
+without "Pink", "Beige" and "White"
+repeating colors until least common multiple (19 colors vs 8 shapes, some filled white) is reached (152 unique combinations).
+*/
+
+.series0.chart-symbol { -fx-background-color: #e6194b; }
+.series1.chart-symbol { -fx-background-color: #3cb44b; }
+.series2.chart-symbol { -fx-background-color: #ffe119; }
+.series3.chart-symbol { -fx-background-color: #0082c8; }
+.series4.chart-symbol { -fx-background-color: #f58231; }
+.series5.chart-symbol { -fx-background-color: #911eb4, white; }
+.series6.chart-symbol { -fx-background-color: #46f0f0, white; }
+.series7.chart-symbol { -fx-background-color: #f032e6, white; }
+.series8.chart-symbol { -fx-background-color: #d2f53c; }
+.series9.chart-symbol { -fx-background-color: #aa6e28; }
+.series10.chart-symbol { -fx-background-color: #e6beff; }
+.series11.chart-symbol { -fx-background-color: #ffd8b1; }
+.series12.chart-symbol { -fx-background-color: #008080; }
+.series13.chart-symbol { -fx-background-color: #800000, white; }
+.series14.chart-symbol { -fx-background-color: #808000, white; }
+.series15.chart-symbol { -fx-background-color: #aaffc3, white; }
+.series16.chart-symbol { -fx-background-color: #000080; }
+.series17.chart-symbol { -fx-background-color: #808080; }
+.series18.chart-symbol { -fx-background-color: #000000; }
+.series19.chart-symbol { -fx-background-color: #e6194b; }
+.series20.chart-symbol { -fx-background-color: #3cb44b; }
+.series21.chart-symbol { -fx-background-color: #ffe119, white; }
+.series22.chart-symbol { -fx-background-color: #0082c8, white; }
+.series23.chart-symbol { -fx-background-color: #f58231, white; }
+.series24.chart-symbol { -fx-background-color: #911eb4; }
+.series25.chart-symbol { -fx-background-color: #46f0f0; }
+.series26.chart-symbol { -fx-background-color: #f032e6; }
+.series27.chart-symbol { -fx-background-color: #d2f53c; }
+.series28.chart-symbol { -fx-background-color: #aa6e28; }
+.series29.chart-symbol { -fx-background-color: #e6beff, white; }
+.series30.chart-symbol { -fx-background-color: #ffd8b1, white; }
+.series31.chart-symbol { -fx-background-color: #008080, white; }
+.series32.chart-symbol { -fx-background-color: #800000; }
+.series33.chart-symbol { -fx-background-color: #808000; }
+.series34.chart-symbol { -fx-background-color: #aaffc3; }
+.series35.chart-symbol { -fx-background-color: #000080; }
+.series36.chart-symbol { -fx-background-color: #808080; }
+.series37.chart-symbol { -fx-background-color: #000000, white; }
+.series38.chart-symbol { -fx-background-color: #e6194b, white; }
+.series39.chart-symbol { -fx-background-color: #3cb44b, white; }
+.series40.chart-symbol { -fx-background-color: #ffe119; }
+.series41.chart-symbol { -fx-background-color: #0082c8; }
+.series42.chart-symbol { -fx-background-color: #f58231; }
+.series43.chart-symbol { -fx-background-color: #911eb4; }
+.series44.chart-symbol { -fx-background-color: #46f0f0; }
+.series45.chart-symbol { -fx-background-color: #f032e6, white; }
+.series46.chart-symbol { -fx-background-color: #d2f53c, white; }
+.series47.chart-symbol { -fx-background-color: #aa6e28, white; }
+.series48.chart-symbol { -fx-background-color: #e6beff; }
+.series49.chart-symbol { -fx-background-color: #ffd8b1; }
+.series50.chart-symbol { -fx-background-color: #008080; }
+.series51.chart-symbol { -fx-background-color: #800000; }
+.series52.chart-symbol { -fx-background-color: #808000; }
+.series53.chart-symbol { -fx-background-color: #aaffc3, white; }
+.series54.chart-symbol { -fx-background-color: #000080, white; }
+.series55.chart-symbol { -fx-background-color: #808080, white; }
+.series56.chart-symbol { -fx-background-color: #000000; }
+.series57.chart-symbol { -fx-background-color: #e6194b; }
+.series58.chart-symbol { -fx-background-color: #3cb44b; }
+.series59.chart-symbol { -fx-background-color: #ffe119; }
+.series60.chart-symbol { -fx-background-color: #0082c8; }
+.series61.chart-symbol { -fx-background-color: #f58231, white; }
+.series62.chart-symbol { -fx-background-color: #911eb4, white; }
+.series63.chart-symbol { -fx-background-color: #46f0f0, white; }
+.series64.chart-symbol { -fx-background-color: #f032e6; }
+.series65.chart-symbol { -fx-background-color: #d2f53c; }
+.series66.chart-symbol { -fx-background-color: #aa6e28; }
+.series67.chart-symbol { -fx-background-color: #e6beff; }
+.series68.chart-symbol { -fx-background-color: #ffd8b1; }
+.series69.chart-symbol { -fx-background-color: #008080, white; }
+.series70.chart-symbol { -fx-background-color: #800000, white; }
+.series71.chart-symbol { -fx-background-color: #808000, white; }
+.series72.chart-symbol { -fx-background-color: #aaffc3; }
+.series73.chart-symbol { -fx-background-color: #000080; }
+.series74.chart-symbol { -fx-background-color: #808080; }
+.series75.chart-symbol { -fx-background-color: #000000; }
+.series76.chart-symbol { -fx-background-color: #e6194b; }
+.series77.chart-symbol { -fx-background-color: #3cb44b, white; }
+.series78.chart-symbol { -fx-background-color: #ffe119, white; }
+.series79.chart-symbol { -fx-background-color: #0082c8, white; }
+.series80.chart-symbol { -fx-background-color: #f58231; }
+.series81.chart-symbol { -fx-background-color: #911eb4; }
+.series82.chart-symbol { -fx-background-color: #46f0f0; }
+.series83.chart-symbol { -fx-background-color: #f032e6; }
+.series84.chart-symbol { -fx-background-color: #d2f53c; }
+.series85.chart-symbol { -fx-background-color: #aa6e28, white; }
+.series86.chart-symbol { -fx-background-color: #e6beff, white; }
+.series87.chart-symbol { -fx-background-color: #ffd8b1, white; }
+.series88.chart-symbol { -fx-background-color: #008080; }
+.series89.chart-symbol { -fx-background-color: #800000; }
+.series90.chart-symbol { -fx-background-color: #808000; }
+.series91.chart-symbol { -fx-background-color: #aaffc3; }
+.series92.chart-symbol { -fx-background-color: #000080; }
+.series93.chart-symbol { -fx-background-color: #808080, white; }
+.series94.chart-symbol { -fx-background-color: #000000, white; }
+.series95.chart-symbol { -fx-background-color: #e6194b, white; }
+.series96.chart-symbol { -fx-background-color: #3cb44b; }
+.series97.chart-symbol { -fx-background-color: #ffe119; }
+.series98.chart-symbol { -fx-background-color: #0082c8; }
+.series99.chart-symbol { -fx-background-color: #f58231; }
+.series100.chart-symbol { -fx-background-color: #911eb4; }
+.series101.chart-symbol { -fx-background-color: #46f0f0, white; }
+.series102.chart-symbol { -fx-background-color: #f032e6, white; }
+.series103.chart-symbol { -fx-background-color: #d2f53c, white; }
+.series104.chart-symbol { -fx-background-color: #aa6e28; }
+.series105.chart-symbol { -fx-background-color: #e6beff; }
+.series106.chart-symbol { -fx-background-color: #ffd8b1; }
+.series107.chart-symbol { -fx-background-color: #008080; }
+.series108.chart-symbol { -fx-background-color: #800000; }
+.series109.chart-symbol { -fx-background-color: #808000, white; }
+.series110.chart-symbol { -fx-background-color: #aaffc3, white; }
+.series111.chart-symbol { -fx-background-color: #000080, white; }
+.series112.chart-symbol { -fx-background-color: #808080; }
+.series113.chart-symbol { -fx-background-color: #000000; }
+.series114.chart-symbol { -fx-background-color: #e6194b; }
+.series115.chart-symbol { -fx-background-color: #3cb44b; }
+.series116.chart-symbol { -fx-background-color: #ffe119; }
+.series117.chart-symbol { -fx-background-color: #0082c8, white; }
+.series118.chart-symbol { -fx-background-color: #f58231, white; }
+.series119.chart-symbol { -fx-background-color: #911eb4, white; }
+.series120.chart-symbol { -fx-background-color: #46f0f0; }
+.series121.chart-symbol { -fx-background-color: #f032e6; }
+.series122.chart-symbol { -fx-background-color: #d2f53c; }
+.series123.chart-symbol { -fx-background-color: #aa6e28; }
+.series124.chart-symbol { -fx-background-color: #e6beff; }
+.series125.chart-symbol { -fx-background-color: #ffd8b1, white; }
+.series126.chart-symbol { -fx-background-color: #008080, white; }
+.series127.chart-symbol { -fx-background-color: #800000, white; }
+.series128.chart-symbol { -fx-background-color: #808000; }
+.series129.chart-symbol { -fx-background-color: #aaffc3; }
+.series130.chart-symbol { -fx-background-color: #000080; }
+.series131.chart-symbol { -fx-background-color: #808080; }
+.series132.chart-symbol { -fx-background-color: #000000; }
+.series133.chart-symbol { -fx-background-color: #e6194b, white; }
+.series134.chart-symbol { -fx-background-color: #3cb44b, white; }
+.series135.chart-symbol { -fx-background-color: #ffe119, white; }
+.series136.chart-symbol { -fx-background-color: #0082c8; }
+.series137.chart-symbol { -fx-background-color: #f58231; }
+.series138.chart-symbol { -fx-background-color: #911eb4; }
+.series139.chart-symbol { -fx-background-color: #46f0f0; }
+.series140.chart-symbol { -fx-background-color: #f032e6; }
+.series141.chart-symbol { -fx-background-color: #d2f53c, white; }
+.series142.chart-symbol { -fx-background-color: #aa6e28, white; }
+.series143.chart-symbol { -fx-background-color: #e6beff, white; }
+.series144.chart-symbol { -fx-background-color: #ffd8b1; }
+.series145.chart-symbol { -fx-background-color: #008080; }
+.series146.chart-symbol { -fx-background-color: #800000; }
+.series147.chart-symbol { -fx-background-color: #808000; }
+.series148.chart-symbol { -fx-background-color: #aaffc3; }
+.series149.chart-symbol { -fx-background-color: #000080, white; }
+.series150.chart-symbol { -fx-background-color: #808080, white; }
+.series151.chart-symbol { -fx-background-color: #000000, white; }
