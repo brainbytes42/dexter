@@ -4,5 +4,5 @@ dependencies {
 	compile project(':DexterCore')
 
 	compile 'io.reactivex.rxjava2:rxjavafx:2.2.2'
-	compile 'org.controlsfx:controlsfx:8.+'
+	compile 'org.controlsfx:controlsfx:8.+' // v9 only for Java9!
 }

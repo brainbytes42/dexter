@@ -1,5 +1,6 @@
 package de.panbytes.dexter.appfx;
 
+import de.panbytes.dexter.appfx.misc.WindowSizePersistence;
 import de.panbytes.dexter.core.ClassLabel;
 import de.panbytes.dexter.core.DexterCore;
 import de.panbytes.dexter.core.activelearning.ActiveLearning;
@@ -69,11 +70,15 @@ public class InspectionView {
 
         Platform.runLater(() -> {
             Stage stage = new Stage();
-            stage.initModality(Modality.APPLICATION_MODAL);
+//            stage.initModality(Modality.APPLICATION_MODAL);
 
             JavaFxObservable.eventsOf(stage, WindowEvent.WINDOW_HIDDEN).subscribe(inspectionView.windowClosed);
 
             inspectionView.lifecycleDisposable.add(inspectionView.requestCloseView.subscribe(__ -> stage.close()));
+
+            WindowSizePersistence.loadAndSaveOnClose(stage,
+                InspectionView.class.getSimpleName() + "." + dexterCore.getAppContext()
+                    .getSettingsRegistry().getDomainSettings().getDomainIdentifier());
 
             try {
                 stage.setScene(new Scene(fxmlLoader.load()));
@@ -166,7 +171,7 @@ public class InspectionView {
                                                                                                                                               .entrySet()
                                                                                                                                               .stream()
                                                                                                                                               .map(entry -> new XYChart.Data<>(
-                                                                                                                                                      entry.getValue(),
+                                                                                                                                                      entry.getValue()/classificationResults.size(),
                                                                                                                                                       (entry.getKey()
                                                                                                                                                             .equals(classLabelOpt
                                                                                                                                                                             .get())
@@ -180,7 +185,7 @@ public class InspectionView {
                                                                                                                                                               .toCollection(
                                                                                                                                                                       FXCollections::observableArrayList)))
                                                                                                                                       .map(chartData -> new XYChart.Series<>(
-                                                                                                                                              "",
+                                                                                                                                              "Validation-Run",
                                                                                                                                               chartData))
                                                                                                                                       .collect(
                                                                                                                                               Collectors
@@ -203,7 +208,7 @@ public class InspectionView {
                                                                                                                                                 Collectors
                                                                                                                                                         .toCollection(
                                                                                                                                                                 FXCollections::observableArrayList)))
-                                                                                 .map(chartData -> new XYChart.Series<>("", chartData))
+                                                                                 .map(chartData -> new XYChart.Series<>("Classification", chartData))
                                                                                  .map(FXCollections::singletonObservableList));
             }
         }).subscribe(seriesListOpt -> {
@@ -228,6 +233,12 @@ public class InspectionView {
                                                                                                                       FXCollections::observableList)));
 
             this.probabilityChart.getYAxis().setAutoRanging(true); // otherwise labels aren't changed by sorting, but only bars!
+
+
+            // adapt chart-height to ensure visible labels; numbers found by trial & error for current layout... :-/
+            this.probabilityChart.setPrefHeight(
+                Math.max(((CategoryAxis) this.probabilityChart.getYAxis()).getCategories().size() * 20 + 180, 150));
+
         }));
 
     }

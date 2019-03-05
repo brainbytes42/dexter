@@ -30,7 +30,7 @@ public class InteractiveScatterChart<X extends Number, Y extends Number> extends
     private final ObservableList<Data<X, Y>> currentSelectionUnmodifiable = FXCollections.unmodifiableObservableList(currentSelection);
 
     private final ObjectProperty<Effect> selectionEffect = new SimpleObjectProperty<>(
-            new DropShadow(BlurType.TWO_PASS_BOX, Color.RED, 15, 0.5, 0, 0));
+            new DropShadow(BlurType.TWO_PASS_BOX, Color.RED, 40, 0.9, 0, 0));
 
     /**
      * @see ScatterChart#ScatterChart(Axis, Axis)

@@ -311,7 +311,7 @@ public class ModelEvaluation {
          * @param measureFunction
          */
         QualityMeasure(String displayString, String displayDescription, Function<Map<ResultClassification, Long>, Double> measureFunction) {
-            this(displayString, displayDescription, measureFunction, value -> String.format("%.1f %%", value * 100));
+            this(displayString, displayDescription, measureFunction, value -> String.format("%.2f %%", value * 100));
         }
 
         private double calc(Map<ResultClassification, Long> resultClassifications) {

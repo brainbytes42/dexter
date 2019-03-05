@@ -17,26 +17,26 @@ public class RxPreference<T> extends RxField<T> implements RxPreferenceReadOnly<
     private final T defaultValue;
 
     RxPreference(T defaultValue,
-                 Class<?> associatedClass,
-                 String name,
-                 PreferenceReader<T> preferenceReader,
-                 PreferenceWriter<T> preferenceWriter) {
+        Class<?> associatedClass,
+        String name,
+        String additionalIdentifier, PreferenceReader<T> preferenceReader,
+        PreferenceWriter<T> preferenceWriter) {
 
         // initial value is stored value if available, otherwise default value.
-        super(preferenceReader.read(getPreferences(associatedClass), makeKey(associatedClass, name), defaultValue));
+        super(preferenceReader.read(getPreferences(associatedClass, additionalIdentifier), name, defaultValue));
 
         this.defaultValue = checkNotNull(defaultValue,"Default value may not be null for preference!");
 
         // write new values
         // TODO error-handling
         toObservable().skip(1)
-                      .subscribe(newValue -> preferenceWriter.write(getPreferences(associatedClass), makeKey(associatedClass, name),
+                      .subscribe(newValue -> preferenceWriter.write(getPreferences(associatedClass, additionalIdentifier), name,
                                                                     newValue));
 
         // include changes from outside, defaulting to current value
-        getPreferences(associatedClass).addPreferenceChangeListener(evt -> {
-            if (evt.getKey().equals(makeKey(associatedClass, name))) {
-                setValue(preferenceReader.read(getPreferences(associatedClass), makeKey(associatedClass, name), getValue()));
+        getPreferences(associatedClass, additionalIdentifier).addPreferenceChangeListener(evt -> {
+            if (evt.getKey().equals(name)) {
+                setValue(preferenceReader.read(getPreferences(associatedClass, additionalIdentifier), name, getValue()));
             }
         });
 
@@ -46,17 +46,18 @@ public class RxPreference<T> extends RxField<T> implements RxPreferenceReadOnly<
         setValue(this.defaultValue);
     }
 
-
-    private static Preferences getPreferences(Class<?> associatedClass) {
-        return Preferences.userNodeForPackage(associatedClass);
-    }
-
-    private static String makeKey(Class<?> associatedClass, String name) {
-        return associatedClass.getSimpleName() + "." + name;
+    private static Preferences getPreferences(Class<?> associatedClass, String additionalIdentifier) {
+        Preferences preferences = Preferences.userNodeForPackage(associatedClass)
+            .node(associatedClass.getSimpleName());
+        return additionalIdentifier!=null ? preferences.node(additionalIdentifier) : preferences;
     }
 
     public static <T> PreferenceBuilderStepDefaultValue<T> createForIdentifier(Class<?> associatedClass, String name) {
-        return new Builder<T>(associatedClass, name);
+        return new Builder<T>(associatedClass, null, name);
+    }
+
+    public static <T> PreferenceBuilderStepDefaultValue<T> createForIdentifier(Class<?> associatedClass, String additionalIdentifier, String name) {
+        return new Builder<T>(associatedClass, additionalIdentifier, name);
     }
 
     @Override
@@ -110,13 +111,15 @@ public class RxPreference<T> extends RxField<T> implements RxPreferenceReadOnly<
 
     static class Builder<T> implements PreferenceBuilderStepDefaultValue<T>, PreferenceBuilderStepMarshalling<T>, PreferenceBuilderFinal<T> {
         private final Class<?> associatedClass;
+        private final String additionalIdentifier;
         private final String name;
         private T defaultValue;
         private PreferenceReader<T> reader;
         private PreferenceWriter<T> writer;
 
-        Builder(Class<?> associatedClass, String name) {
+        Builder(Class<?> associatedClass, String additionalIdentifier, String name) {
             this.associatedClass = associatedClass;
+            this.additionalIdentifier = additionalIdentifier;
             this.name = name;
         }
 
@@ -128,42 +131,43 @@ public class RxPreference<T> extends RxField<T> implements RxPreferenceReadOnly<
 
         @Override
         public RxPreferenceBoolean buildWithDefaultValue(boolean defaultValue) {
-            return new RxPreferenceBoolean(defaultValue, this.associatedClass, this.name);
+            return new RxPreferenceBoolean(defaultValue, this.associatedClass, this.name, this.additionalIdentifier);
         }
 
         @Override
         public RxPreferenceByteArray buildWithDefaultValue(byte[] defaultValue) {
-            return new RxPreferenceByteArray(defaultValue, this.associatedClass, this.name);
+            return new RxPreferenceByteArray(defaultValue, this.associatedClass, this.name, this.additionalIdentifier);
         }
 
         @Override
         public RxPreferenceDouble buildWithDefaultValue(double defaultValue) {
-            return new RxPreferenceDouble(defaultValue, this.associatedClass, this.name);
+            return new RxPreferenceDouble(defaultValue, this.associatedClass, this.name, this.additionalIdentifier);
         }
 
         @Override
         public RxPreferenceFloat buildWithDefaultValue(float defaultValue) {
-            return new RxPreferenceFloat(defaultValue, this.associatedClass, this.name);
+            return new RxPreferenceFloat(defaultValue, this.associatedClass, this.name, this.additionalIdentifier);
         }
 
         @Override
         public RxPreferenceInt buildWithDefaultValue(int defaultValue) {
-            return new RxPreferenceInt(defaultValue, this.associatedClass, this.name);
+            return new RxPreferenceInt(defaultValue, this.associatedClass, this.name, this.additionalIdentifier);
         }
 
         @Override
         public RxPreferenceLong buildWithDefaultValue(long defaultValue) {
-            return new RxPreferenceLong(defaultValue, this.associatedClass, this.name);
+            return new RxPreferenceLong(defaultValue, this.associatedClass, this.name, this.additionalIdentifier);
         }
 
         @Override
         public RxPreferenceString buildWithDefaultValue(String defaultValue) {
-            return new RxPreferenceString(defaultValue, this.associatedClass, this.name);
+            return new RxPreferenceString(defaultValue, this.associatedClass, this.name, this.additionalIdentifier);
         }
 
         @Override
         public RxPreference<T> build() {
-            return new RxPreference<>(this.defaultValue, this.associatedClass, this.name, this.reader, this.writer);
+            return new RxPreference<>(this.defaultValue, this.associatedClass, this.name,
+                additionalIdentifier, this.reader, this.writer);
         }
 
         @Override

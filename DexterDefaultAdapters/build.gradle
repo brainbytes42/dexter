@@ -1,0 +1,10 @@
+group 'de.panbytes.dexter.impl.csv'
+version '0.1-SNAPSHOT'
+
+apply plugin: 'application'
+mainClassName = 'de.panbytes.dexter.impl.csv.DexterCSV'
+
+dependencies {
+    compile project(':DexterAppFX')
+    compile 'org.apache.commons:commons-csv:1.+'
+}

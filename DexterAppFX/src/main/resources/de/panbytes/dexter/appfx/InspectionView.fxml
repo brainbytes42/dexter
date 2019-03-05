@@ -10,6 +10,7 @@
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.MenuButton?>
 <?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.SeparatorMenuItem?>
 <?import javafx.scene.control.TextArea?>
 <?import javafx.scene.control.TextField?>
@@ -19,102 +20,109 @@
 <?import javafx.scene.layout.ColumnConstraints?>
 <?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.RowConstraints?>
+<?import javafx.util.converter.PercentageStringConverter?>
 
 <BorderPane fx:id="rootPane" prefHeight="700.0" prefWidth="1100.0" xmlns="http://javafx.com/javafx/8.0.172-ea" xmlns:fx="http://javafx.com/fxml/1" fx:controller="de.panbytes.dexter.appfx.InspectionView">
-    <bottom>
-        <ButtonBar fx:id="mainButtons" BorderPane.alignment="CENTER">
-            <buttons>
-                <Button fx:id="closeInspectionButton" cancelButton="true" mnemonicParsing="false" text="Close" ButtonBar.buttonData="CANCEL_CLOSE" />
-                <MenuButton fx:id="labelAsMenuButton" mnemonicParsing="false" text="Label as..." ButtonBar.buttonData="OK_DONE">
-                    <items>
-                        <MenuItem mnemonicParsing="false" text="&lt;Label A&gt;" />
-                        <MenuItem mnemonicParsing="false" text="&lt;Label B&gt;" />
-                        <MenuItem mnemonicParsing="false" text="&lt;Label ...&gt;" />
-                        <SeparatorMenuItem mnemonicParsing="false" />
-                        <CustomMenuItem fx:id="enterNewLabelCustomMenuItem" hideOnClick="false" mnemonicParsing="false" text="New Label">
-                            <content>
-                                <BorderPane>
-                                    <right>
-                                        <Button fx:id="enterNewLabelCustomMenuItemOkButton" mnemonicParsing="false" text="OK" BorderPane.alignment="CENTER" />
-                                    </right>
-                                    <center>
-                                        <TextField fx:id="enterNewLabelCustomMenuItemTextField" promptText="Enter new Label" BorderPane.alignment="CENTER">
-                                            <BorderPane.margin>
-                                                <Insets right="5.0" />
-                                            </BorderPane.margin>
-                                        </TextField>
-                                    </center>
-                                    <opaqueInsets>
-                                        <Insets />
-                                    </opaqueInsets>
-                                </BorderPane>
-                            </content>
-                        </CustomMenuItem>
-                    </items>
-                </MenuButton>
-            </buttons>
-            <BorderPane.margin>
-                <Insets top="5.0" />
-            </BorderPane.margin>
-        </ButtonBar>
-    </bottom>
-    <right>
-        <TitledPane collapsible="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" text="General" BorderPane.alignment="CENTER">
-            <BorderPane.margin>
-                <Insets left="5.0" />
-            </BorderPane.margin>
-            <content>
-                <GridPane>
-                    <columnConstraints>
-                        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
-                        <ColumnConstraints hgrow="SOMETIMES" />
-                    </columnConstraints>
-                    <rowConstraints>
-                        <RowConstraints minHeight="10.0" />
-                        <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
-                        <RowConstraints minHeight="10.0" />
-                  <RowConstraints minHeight="10.0" prefHeight="30.0" />
-                        <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
-                  <RowConstraints minHeight="10.0" />
-                        <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
-                    </rowConstraints>
-                    <children>
-                        <Label text="Name:" />
-                        <Label text="Description:" GridPane.rowIndex="1" />
-                        <Label text="Classification:" GridPane.rowIndex="2" />
-                        <TextField fx:id="entityNameTextField" editable="false" GridPane.columnIndex="1" />
-                        <TextArea fx:id="entityDescriptionTextArea" editable="false" prefHeight="100.0" prefWidth="200.0" wrapText="true" GridPane.columnIndex="1" GridPane.rowIndex="1" />
-                        <TextField fx:id="entityClassificationTextField" editable="false" GridPane.columnIndex="1" GridPane.rowIndex="2" />
-                        <StackedBarChart fx:id="probabilityChart" categoryGap="5.0" legendVisible="false" prefHeight="150.0" prefWidth="150.0" titleSide="BOTTOM" GridPane.columnSpan="2147483647" GridPane.rowIndex="6" GridPane.rowSpan="2147483647">
-                            <xAxis>
-                                <NumberAxis side="BOTTOM" />
-                            </xAxis>
-                            <yAxis>
-                                <CategoryAxis side="LEFT" />
-                            </yAxis>
-                        </StackedBarChart>
-                  <Label text="Classification Probabilities:" GridPane.columnSpan="2147483647" GridPane.rowIndex="5" />
-                  <Label layoutX="20.0" layoutY="235.0" text="Uncertainty:" GridPane.rowIndex="3" />
-                  <TextField fx:id="uncertaintyTextField" editable="false" layoutX="120.0" layoutY="231.0" GridPane.columnIndex="1" GridPane.rowIndex="3" />
-                    </children>
-                </GridPane>
-            </content>
-        </TitledPane>
-    </right>
-    <center>
-        <TitledPane fx:id="domainInspectionDisplayContainer" collapsible="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" text="Domain" BorderPane.alignment="CENTER">
-            <content>
-                <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0" />
-            </content>
-            <BorderPane.margin>
-                <Insets />
-            </BorderPane.margin>
-        </TitledPane>
-    </center>
-    <opaqueInsets>
+  <bottom>
+    <ButtonBar fx:id="mainButtons" BorderPane.alignment="CENTER">
+      <buttons>
+        <Button fx:id="closeInspectionButton" cancelButton="true" mnemonicParsing="false" text="Close" ButtonBar.buttonData="CANCEL_CLOSE" />
+        <MenuButton fx:id="labelAsMenuButton" mnemonicParsing="false" text="Label as..." ButtonBar.buttonData="OK_DONE">
+          <items>
+            <MenuItem mnemonicParsing="false" text="&lt;Label A&gt;" />
+            <MenuItem mnemonicParsing="false" text="&lt;Label B&gt;" />
+            <MenuItem mnemonicParsing="false" text="&lt;Label ...&gt;" />
+            <SeparatorMenuItem mnemonicParsing="false" />
+            <CustomMenuItem fx:id="enterNewLabelCustomMenuItem" hideOnClick="false" mnemonicParsing="false" text="New Label">
+              <content>
+                <BorderPane>
+                  <right>
+                    <Button fx:id="enterNewLabelCustomMenuItemOkButton" mnemonicParsing="false" text="OK" BorderPane.alignment="CENTER" />
+                  </right>
+                  <center>
+                    <TextField fx:id="enterNewLabelCustomMenuItemTextField" promptText="Enter new Label" BorderPane.alignment="CENTER">
+                      <BorderPane.margin>
+                        <Insets right="5.0" />
+                      </BorderPane.margin>
+                    </TextField>
+                  </center>
+                  <opaqueInsets>
+                    <Insets />
+                  </opaqueInsets>
+                </BorderPane>
+              </content>
+            </CustomMenuItem>
+          </items>
+        </MenuButton>
+      </buttons>
+      <BorderPane.margin>
+        <Insets top="5.0" />
+      </BorderPane.margin>
+    </ButtonBar>
+  </bottom>
+  <right>
+    <TitledPane collapsible="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" text="General" BorderPane.alignment="CENTER">
+      <BorderPane.margin>
+        <Insets left="5.0" />
+      </BorderPane.margin>
+      <content>
+        <GridPane>
+          <columnConstraints>
+            <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+            <ColumnConstraints hgrow="SOMETIMES" />
+          </columnConstraints>
+          <rowConstraints>
+            <RowConstraints minHeight="25.0" />
+            <RowConstraints minHeight="60.0" vgrow="SOMETIMES" />
+            <RowConstraints minHeight="25.0" />
+            <RowConstraints minHeight="25.0" />
+            <RowConstraints minHeight="25.0" vgrow="SOMETIMES" />
+            <RowConstraints minHeight="25.0" />
+            <RowConstraints maxHeight="300" minHeight="100.0" prefHeight="100.0" vgrow="SOMETIMES" />
+          </rowConstraints>
+          <children>
+            <Label text="Name:" />
+            <Label text="Description:" GridPane.rowIndex="1" />
+            <Label text="Classification:" GridPane.rowIndex="2" />
+            <TextField fx:id="entityNameTextField" editable="false" GridPane.columnIndex="1" />
+            <TextArea fx:id="entityDescriptionTextArea" editable="false" prefHeight="100.0" prefWidth="200.0" wrapText="true" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+            <TextField fx:id="entityClassificationTextField" editable="false" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+            <ScrollPane fitToWidth="true" GridPane.columnSpan="2147483647" GridPane.rowIndex="6" GridPane.rowSpan="2147483647">
+              <content>
+                <StackedBarChart fx:id="probabilityChart" categoryGap="5.0" prefHeight="150.0" prefWidth="150.0" titleSide="BOTTOM" legendVisible="false">
+                  <xAxis>
+                    <NumberAxis label="(avg.) Probability (one color per run)" side="BOTTOM" autoRanging="false" upperBound="1.0" tickUnit="0.2" minorTickCount="4">
+                      <tickLabelFormatter><PercentageStringConverter /></tickLabelFormatter>
+                    </NumberAxis>
+                  </xAxis>
+                  <yAxis>
+                    <CategoryAxis side="LEFT" />
+                  </yAxis>
+                </StackedBarChart>
+              </content>
+            </ScrollPane>
+            <Label text="Classification Probabilities:" GridPane.columnSpan="2147483647" GridPane.rowIndex="5" />
+            <Label layoutX="20.0" layoutY="235.0" text="Uncertainty:" GridPane.rowIndex="3" />
+            <TextField fx:id="uncertaintyTextField" editable="false" layoutX="120.0" layoutY="231.0" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+          </children>
+        </GridPane>
+      </content>
+    </TitledPane>
+  </right>
+  <center>
+    <TitledPane fx:id="domainInspectionDisplayContainer" collapsible="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" text="Domain" BorderPane.alignment="CENTER">
+      <content>
+        <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0" />
+      </content>
+      <BorderPane.margin>
         <Insets />
-    </opaqueInsets>
-    <padding>
-        <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
-    </padding>
+      </BorderPane.margin>
+    </TitledPane>
+  </center>
+  <opaqueInsets>
+    <Insets />
+  </opaqueInsets>
+  <padding>
+    <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+  </padding>
 </BorderPane>

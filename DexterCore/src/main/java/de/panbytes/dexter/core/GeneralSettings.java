@@ -3,6 +3,7 @@ package de.panbytes.dexter.core;
 import de.panbytes.dexter.ext.prefs.RxPreference;
 import de.panbytes.dexter.ext.prefs.RxPreferenceBoolean;
 import de.panbytes.dexter.ext.prefs.RxPreferenceDouble;
+import java.util.prefs.Preferences;
 import javafx.scene.Node;
 
 import java.util.Optional;
@@ -11,10 +12,20 @@ import java.util.function.Supplier;
 public class GeneralSettings implements SettingsStorage {
 
 
-    private RxPreferenceDouble perplexity = RxPreference.createForIdentifier(GeneralSettings.class, "tsnePerplexity").buildWithDefaultValue(30.);
-    private RxPreferenceBoolean classificationOnFilteredData = RxPreference.createForIdentifier(GeneralSettings.class, "classificationOnFilteredData")
-                                                                           .buildWithDefaultValue(true);
+    private final String domainIdentifier;
+
+    private final RxPreferenceDouble perplexity;
+    private final RxPreferenceBoolean classificationOnFilteredData;
+
     private Supplier<Node> viewSupplier;
+
+    public GeneralSettings(String domainIdentifier) {
+        this.domainIdentifier = domainIdentifier;
+
+        this.perplexity = RxPreference.createForIdentifier(GeneralSettings.class, domainIdentifier, "tsnePerplexity").buildWithDefaultValue(30.);
+        this.classificationOnFilteredData = RxPreference.createForIdentifier(GeneralSettings.class, domainIdentifier, "classificationOnFilteredData")
+                                                                               .buildWithDefaultValue(true);
+    }
 
     @Override
     public Optional<Node> getSettingsView() {

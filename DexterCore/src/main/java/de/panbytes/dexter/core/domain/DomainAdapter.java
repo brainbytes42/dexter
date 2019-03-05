@@ -1,9 +1,6 @@
 package de.panbytes.dexter.core.domain;
 
-import de.panbytes.dexter.core.AppContext;
-import de.panbytes.dexter.core.ClassLabel;
-import de.panbytes.dexter.core.DataSourceActions;
-import de.panbytes.dexter.core.SettingsStorage;
+import de.panbytes.dexter.core.*;
 import de.panbytes.dexter.core.data.DataEntity;
 import de.panbytes.dexter.core.data.DataNode;
 import de.panbytes.dexter.core.data.DataSource;
@@ -267,10 +264,6 @@ public abstract class DomainAdapter extends Named.BaseImpl implements Named {
     }
 
     public Optional<Node> getDomainInspectionView(DataEntity inspectionTarget) {
-        return Optional.empty();
-    }
-
-    public Optional<SettingsStorage> getDomainSettings() {
         return Optional.empty();
     }
 

@@ -42,7 +42,7 @@ public class DexterCore {
 
     public DexterCore(final Function<AppContext, DomainAdapter> domainAdapterFactory, DomainSettings domainSettings) {
 
-        this.appContext = new AppContext(new GeneralSettings(), domainSettings);
+        this.appContext = new AppContext(new GeneralSettings(domainSettings.getDomainIdentifier()), domainSettings);
 
         checkNotNull(domainAdapterFactory, "Factory for DomainAdapter is null!");
         this.domainAdapter = checkNotNull(domainAdapterFactory.apply(this.appContext), "Could not create DomainAdapter!");

@@ -1,5 +1,7 @@
 package de.panbytes.dexter.core;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import de.panbytes.dexter.ext.prefs.RxPreferenceString;
 import javafx.scene.Node;
 
@@ -8,7 +10,13 @@ import java.util.Optional;
 public class DomainSettings implements SettingsStorage {
 
 
-    private final RxPreferenceString rejectedClassLabel = rejectedClassLabel_create();
+    private final String domainIdentifier;
+    private final RxPreferenceString rejectedClassLabel;
+
+    public DomainSettings(String domainIdentifier) {
+        this.domainIdentifier = checkNotNull(domainIdentifier);
+        this.rejectedClassLabel = rejectedClassLabel_create();
+    }
 
     @Override
     public Optional<Node> getSettingsView() {
@@ -21,8 +29,11 @@ public class DomainSettings implements SettingsStorage {
     }
 
     protected RxPreferenceString rejectedClassLabel_create() {
-        return RxPreferenceString.createForIdentifier(DomainSettings.class, "rejectedClassLabel")
+        return RxPreferenceString.createForIdentifier(DomainSettings.class, domainIdentifier,"rejectedClassLabel")
                                  .buildWithDefaultValue("REJECTED");
     }
 
+    public String getDomainIdentifier() {
+        return domainIdentifier;
+    }
 }

@@ -1,6 +1,7 @@
 package de.panbytes.dexter.appfx;
 
 import com.google.common.collect.ArrayTable;
+import de.panbytes.dexter.appfx.misc.WindowSizePersistence;
 import de.panbytes.dexter.core.ClassLabel;
 import de.panbytes.dexter.core.DexterCore;
 import de.panbytes.dexter.core.activelearning.ActiveLearning;
@@ -42,6 +43,7 @@ import java.text.Collator;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import javafx.util.converter.PercentageStringConverter;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -74,11 +76,15 @@ public class ModelQualityView extends Application {
 
         Platform.runLater(() -> {
             Stage stage = new Stage();
-            stage.initModality(Modality.NONE);
+//            stage.initModality(Modality.APPLICATION_MODAL);
 
             JavaFxObservable.eventsOf(stage, WindowEvent.WINDOW_HIDDEN).subscribe(modelQualityView.windowClosed);
 
             //            modelQualityView.requestCloseView.subscribe(__ -> stage.close());
+
+            WindowSizePersistence.loadAndSaveOnClose(stage,
+                ModelQualityView.class.getSimpleName() + "." + dexterCore.getAppContext()
+                    .getSettingsRegistry().getDomainSettings().getDomainIdentifier());
 
             try {
                 final Scene scene = new Scene(fxmlLoader.load());
@@ -167,7 +173,12 @@ public class ModelQualityView extends Application {
                                                                                        .collect(Collectors.collectingAndThen(
                                                                                                Collectors.toList(),
                                                                                                FXCollections::observableList));
-            return new BarChart<>(new CategoryAxis(), new NumberAxis(), series);
+            NumberAxis numberAxis = new NumberAxis();
+            numberAxis.setLabel("count / total");
+            numberAxis.setTickLabelFormatter(new PercentageStringConverter());
+            CategoryAxis categoryAxis = new CategoryAxis();
+            categoryAxis.setLabel("uncertainty-range");
+            return new BarChart<>(categoryAxis, numberAxis, series);
         }).observeOn(JavaFxScheduler.platform()).subscribe(chart -> {
             chart.prefHeightProperty().bind(Bindings.max(250, this.accuracyMatrixHeight));
             this.uncertaintyPane.setCenter(chart);
@@ -626,7 +637,7 @@ public class ModelQualityView extends Application {
 
         for (int i = 2; i < rowCount; i++) {
             for (int j = 2; j < columnCount; j++) {
-                final Label label = new Label(String.format("%.1f %%", Math.random() * 100));
+                final Label label = new Label(String.format("%.1f %%", Double.NaN));
                 final BorderPane pane = new BorderPane(label);
                 pane.getStyleClass().add("cell");
                 if (i == j) pane.getStyleClass().add("diagonal");

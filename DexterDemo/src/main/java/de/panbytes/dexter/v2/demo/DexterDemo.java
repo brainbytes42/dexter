@@ -37,7 +37,7 @@ public class DexterDemo extends DexterApp {
 
     @Override
     protected DomainAdapter createDomainAdapter(AppContext appContext) {
-        return new DemoDomain("Demo", "Domain Adapter for Demonstrator.", appContext, null);
+        return new DemoDomain("Demo", "Domain Adapter for Demonstrator.", appContext);
     }
 
     private class MnistDataSource extends DataSource {
@@ -106,8 +106,8 @@ public class DexterDemo extends DexterApp {
 
     private class DemoDomain extends DomainAdapter {
 
-        public DemoDomain(String name, String description, AppContext appContext, SettingsStorage domainSettings) {
-            super(name, description,appContext, domainSettings);
+        public DemoDomain(String name, String description, AppContext appContext) {
+            super(name, description,appContext);
 
             this.getDataSourceActions().setAddActions(new DataSourceActions.AddAction("MNIST", "MNIST Dataset", this) {
                 @Override

@@ -1,5 +1,5 @@
 plugins {
-	id 'com.github.ben-manes.versions' version '0.17.0' apply false // find outdated dependencies
+	id 'com.github.ben-manes.versions' version '0.20.0' apply false // find outdated dependencies
 	id 'com.github.johnrengelman.shadow' version '2.0.4' apply false // fat-jar
 }
 
@@ -97,7 +97,7 @@ subprojects {
 		runtime 'ch.qos.logback:logback-classic:1.2.+'
 		
 		// Testing
-		testCompile 'junit:junit:4.+'
+		testCompile 'junit:junit:4.12'
 		testCompile 'org.mockito:mockito-core:2.+'
 		testCompile 'pl.pragmatists:JUnitParams:1.+'
 		testCompile 'org.hamcrest:hamcrest-library:1.+'
