@@ -10,7 +10,7 @@ public class AppContext {
     private final SettingsRegistry settingsRegistry;
     private final InspectionHistory inspectionHistory;
 
-    AppContext(GeneralSettings generalSettings, DomainSettings domainSettings) {
+    public AppContext(GeneralSettings generalSettings, DomainSettings domainSettings) {
         this.taskMonitor = new TaskMonitor();
         this.pluginRegistry = new PluginRegistry();
         this.settingsRegistry = new SettingsRegistry(generalSettings, domainSettings);

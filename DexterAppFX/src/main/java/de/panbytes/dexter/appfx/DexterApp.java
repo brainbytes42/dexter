@@ -3,31 +3,28 @@
  */
 package de.panbytes.dexter.appfx;
 
+import static com.google.common.base.Verify.verify;
+
 import de.panbytes.dexter.appfx.misc.WindowSizePersistence;
 import de.panbytes.dexter.appfx.settings.DexterGeneralSettingsView;
 import de.panbytes.dexter.core.AppContext;
 import de.panbytes.dexter.core.DexterCore;
 import de.panbytes.dexter.core.DomainSettings;
+import de.panbytes.dexter.core.GeneralSettings;
 import de.panbytes.dexter.core.domain.DomainAdapter;
 import io.reactivex.rxjavafx.observers.JavaFxObserver;
 import io.reactivex.rxjavafx.schedulers.JavaFxScheduler;
+import java.io.IOException;
+import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.prefs.Preferences;
 import javafx.application.Application;
-import javafx.application.Platform;
 import javafx.beans.property.DoubleProperty;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
-import javafx.stage.WindowEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.net.URL;
-
-import static com.google.common.base.Verify.verify;
 
 /**
  * @author Fabian Krippendorff
@@ -52,30 +49,28 @@ public abstract class DexterApp extends Application {
 
         super.init();
 
-        this.dexterCore = new DexterCore(this::createDomainAdapter, createDomainSettings());
+        AppContext appContext = new AppContext(createGeneralSettings(), createDomainSettings());
+        DomainAdapter domainAdapter = createDomainAdapter(appContext);
 
-        this.dexterCore.getAppContext()
-            .getSettingsRegistry()
-            .getGeneralSettings()
-            .setSettingsViewSupplier(new DexterGeneralSettingsView(
-                this.dexterCore.getAppContext().getSettingsRegistry()
-                    .getGeneralSettings())::createView);
+        this.dexterCore = new DexterCore(domainAdapter, appContext);
 
         log.debug("Application has been initialized.");
 
-        onInit();
+    }
+
+    private GeneralSettings createGeneralSettings() {
+        GeneralSettings generalSettings = new GeneralSettings(getDomainIdentifier());
+        generalSettings.setSettingsViewSupplier(
+            new DexterGeneralSettingsView(generalSettings)::createView);
+        return generalSettings;
     }
 
     protected DomainSettings createDomainSettings() {
         return new DomainSettings(getDomainIdentifier());
     }
-
     protected abstract String getDomainIdentifier();
 
     protected abstract DomainAdapter createDomainAdapter(AppContext appContext);
-
-    protected void onInit() {
-    }
 
     @Override
     public final void start(final Stage primaryStage) throws Exception {
@@ -84,11 +79,13 @@ public abstract class DexterApp extends Application {
 
         /*
          * Load the FXML and set the scene to the stage.
+         * This links to the MainView's Controller, class de.panbytes.dexter.appfx.MainView.
          */
         Scene scene = createSceneFromFxml(DexterApp.class.getResource("MainView.fxml"));
         primaryStage.setScene(scene);
         primaryStage.show();
 
+        /* set window-title */
         primaryStage.titleProperty()
             .bind(JavaFxObserver.toBinding(this.dexterCore.getDomainAdapter()
                 .getName()
@@ -110,13 +107,8 @@ public abstract class DexterApp extends Application {
 
         log.debug("Application is up and running.");
 
-        onStart();
-
     }
 
-
-    protected void onStart() {
-    }
 
     private Scene createSceneFromFxml(URL resource) throws IOException {
         // Setup the Main GUI FXML-Loader

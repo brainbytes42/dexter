@@ -279,16 +279,16 @@ class DataSourceTest extends Specification {
 
     }
 
-    def "DataEntity is set Source when added to DataSource"() {
-        expect "not yet added - entity has no source":
-            e1.generatingDataSource == Optional.empty()
-
-        when "added to source":
-            s1.generatedDataEntities = [e1]
-        then "entity knows it's source":
-            e1.generatingDataSource.get() == s1
-
-    }
+//    def "DataEntity is set Source when added to DataSource"() {
+//        expect "not yet added - entity has no source":
+//            e1.generatingDataSource == Optional.empty()
+//
+//        when "added to source":
+//            s1.generatedDataEntities = [e1]
+//        then "entity knows it's source":
+//            e1.generatingDataSource.get() == s1
+//
+//    }
 
     def "ChildNodes are put together from first ChildSources and then DataEntities, each section in its individual order"() {
         when:

@@ -40,17 +40,15 @@ public class DexterCore {
     private final DomainAdapter domainAdapter;
     private final DexterModel dexterModel;
 
-    public DexterCore(final Function<AppContext, DomainAdapter> domainAdapterFactory, DomainSettings domainSettings) {
+    public DexterCore(final DomainAdapter domainAdapter, AppContext appContext) {
 
-        this.appContext = new AppContext(new GeneralSettings(domainSettings.getDomainIdentifier()), domainSettings);
-
-        checkNotNull(domainAdapterFactory, "Factory for DomainAdapter is null!");
-        this.domainAdapter = checkNotNull(domainAdapterFactory.apply(this.appContext), "Could not create DomainAdapter!");
+        this.domainAdapter = checkNotNull(domainAdapter, "DomainAdapter is null!");
+        this.appContext = appContext;
 
         this.dexterModel = new DexterModel(this.domainAdapter, this.appContext);
 
         // register export plugin
-        this.appContext.getPluginRegistry().add(new DataExportPlugin(domainAdapter));
+        this.appContext.getPluginRegistry().add(new DataExportPlugin(this.domainAdapter));
 
         // register plugins with settingsRegistry
         this.appContext.getPluginRegistry().getPlugins().toObservable().subscribe(plugins -> {

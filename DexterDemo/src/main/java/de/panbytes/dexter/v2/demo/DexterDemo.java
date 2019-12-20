@@ -36,6 +36,11 @@ public class DexterDemo extends DexterApp {
     }
 
     @Override
+    protected String getDomainIdentifier() {
+        return "Demo";
+    }
+
+    @Override
     protected DomainAdapter createDomainAdapter(AppContext appContext) {
         return new DemoDomain("Demo", "Domain Adapter for Demonstrator.", appContext);
     }

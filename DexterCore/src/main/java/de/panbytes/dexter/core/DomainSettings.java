@@ -15,7 +15,8 @@ public class DomainSettings implements SettingsStorage {
 
     public DomainSettings(String domainIdentifier) {
         this.domainIdentifier = checkNotNull(domainIdentifier);
-        this.rejectedClassLabel = rejectedClassLabel_create();
+        this.rejectedClassLabel = RxPreferenceString.createForIdentifier(DomainSettings.class,
+            domainIdentifier, "rejectedClassLabel").buildWithDefaultValue("REJECTED");
     }
 
     @Override
@@ -23,17 +24,11 @@ public class DomainSettings implements SettingsStorage {
         return Optional.empty();
     }
 
-
     public final RxPreferenceString rejectedClassLabel() {
         return this.rejectedClassLabel;
     }
 
-    protected RxPreferenceString rejectedClassLabel_create() {
-        return RxPreferenceString.createForIdentifier(DomainSettings.class, domainIdentifier,"rejectedClassLabel")
-                                 .buildWithDefaultValue("REJECTED");
-    }
-
-    public String getDomainIdentifier() {
+    public final String getDomainIdentifier() {
         return domainIdentifier;
     }
 }
