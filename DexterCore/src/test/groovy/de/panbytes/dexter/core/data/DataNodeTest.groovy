@@ -1,4 +1,4 @@
-package de.panbytes.dexter.core
+package de.panbytes.dexter.core.data
 
 import de.panbytes.dexter.core.data.DataNode
 import de.panbytes.dexter.core.domain.FeatureSpace

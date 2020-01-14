@@ -1,5 +1,6 @@
-package de.panbytes.dexter.core
+package de.panbytes.dexter.core.data
 
+import de.panbytes.dexter.core.ClassLabel
 import de.panbytes.dexter.core.data.DataEntity
 import de.panbytes.dexter.core.data.DataNode
 import de.panbytes.dexter.core.data.DomainDataEntity
