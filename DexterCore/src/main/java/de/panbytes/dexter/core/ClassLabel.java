@@ -1,14 +1,14 @@
 package de.panbytes.dexter.core;
 
 import com.google.common.base.Preconditions;
-
 import java.util.HashMap;
 import java.util.Map;
+import javax.annotation.Nonnull;
 
 /**
  * @author Fabian Krippendorff
  */
-public class ClassLabel {
+public class ClassLabel implements Comparable<ClassLabel> {
 
     private static volatile Map<String, ClassLabel> labelMap = new HashMap<>();
     private final String label;
@@ -41,6 +41,11 @@ public class ClassLabel {
     @Override
     public String toString() {
         return getLabel();
+    }
+
+    @Override
+    public int compareTo(@Nonnull ClassLabel other) {
+        return this.getLabel().compareToIgnoreCase(other.getLabel());
     }
 
 }

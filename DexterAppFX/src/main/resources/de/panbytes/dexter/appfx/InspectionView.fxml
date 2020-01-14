@@ -15,18 +15,19 @@
 <?import javafx.scene.control.TextArea?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.control.TitledPane?>
+<?import javafx.scene.control.ToggleButton?>
 <?import javafx.scene.layout.AnchorPane?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.ColumnConstraints?>
 <?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.RowConstraints?>
 <?import javafx.util.converter.PercentageStringConverter?>
+<?import org.controlsfx.control.SegmentedButton?>
 
 <BorderPane fx:id="rootPane" prefHeight="700.0" prefWidth="1100.0" xmlns="http://javafx.com/javafx/8.0.172-ea" xmlns:fx="http://javafx.com/fxml/1" fx:controller="de.panbytes.dexter.appfx.InspectionView">
   <bottom>
     <ButtonBar fx:id="mainButtons" BorderPane.alignment="CENTER">
       <buttons>
-        <Button fx:id="closeInspectionButton" cancelButton="true" mnemonicParsing="false" text="Close" ButtonBar.buttonData="CANCEL_CLOSE" />
         <MenuButton fx:id="labelAsMenuButton" mnemonicParsing="false" text="Label as..." ButtonBar.buttonData="OK_DONE">
           <items>
             <MenuItem mnemonicParsing="false" text="&lt;Label A&gt;" />
@@ -54,6 +55,14 @@
             </CustomMenuItem>
           </items>
         </MenuButton>
+        <SegmentedButton ButtonBar.buttonData="OK_DONE" ButtonBar.buttonUniformSize="false">
+          <buttons>
+            <ToggleButton fx:id="confirmLabelButton" mnemonicParsing="false" text="Confirm current Label"  />
+            <ToggleButton fx:id="useSuggestedLabelButton" mnemonicParsing="false" text="Use suggested Label" />
+            <ToggleButton fx:id="rejectEntityButton" mnemonicParsing="false" text="Reject Entity" />
+          </buttons>
+        </SegmentedButton>
+        <Button fx:id="closeInspectionButton" cancelButton="true" mnemonicParsing="false" text="Close" ButtonBar.buttonData="CANCEL_CLOSE" />
       </buttons>
       <BorderPane.margin>
         <Insets top="5.0" />
@@ -89,9 +98,9 @@
             <TextField fx:id="entityClassificationTextField" editable="false" GridPane.columnIndex="1" GridPane.rowIndex="2" />
             <ScrollPane fitToWidth="true" GridPane.columnSpan="2147483647" GridPane.rowIndex="6" GridPane.rowSpan="2147483647">
               <content>
-                <StackedBarChart fx:id="probabilityChart" categoryGap="5.0" prefHeight="150.0" prefWidth="150.0" titleSide="BOTTOM" legendVisible="false">
+                <StackedBarChart fx:id="probabilityChart" categoryGap="5.0" legendVisible="false" prefHeight="150.0" prefWidth="150.0" titleSide="BOTTOM">
                   <xAxis>
-                    <NumberAxis label="(avg.) Probability (one color per run)" side="BOTTOM" autoRanging="false" upperBound="1.0" tickUnit="0.2" minorTickCount="4">
+                    <NumberAxis autoRanging="false" label="(avg.) Probability (one color per run)" minorTickCount="4" side="BOTTOM" tickUnit="0.2" upperBound="1.0">
                       <tickLabelFormatter><PercentageStringConverter /></tickLabelFormatter>
                     </NumberAxis>
                   </xAxis>

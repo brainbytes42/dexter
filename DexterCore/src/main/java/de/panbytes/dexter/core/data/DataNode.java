@@ -1,18 +1,20 @@
 package de.panbytes.dexter.core.data;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import de.panbytes.dexter.core.domain.FeatureSpace;
 import de.panbytes.dexter.lib.util.reactivex.extensions.RxField;
 import de.panbytes.dexter.lib.util.reactivex.extensions.RxFieldReadOnly;
 import de.panbytes.dexter.util.Named;
 import io.reactivex.Observable;
-
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
-
-import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * The {@code DataNode} is the base class for the data-related class-hierarchies of {@link DataSource} and {@link DataEntity}.
@@ -23,25 +25,119 @@ public abstract class DataNode extends Named.BaseImpl implements Named{
 
     private final FeatureSpace featureSpace;
 
-    private final RxField<EnabledState> enabledState = RxField.withInitialValue(EnabledState.ACTIVE);
     private final RxField<List<DataNode>> childNodes = RxField.withInitialValue(Collections.emptyList());
+
+    private final RxField<Status> status;
+    private final Observable<Set<Status>> mergedBranchStatuses;
+
+    @Deprecated
+    private final RxField<EnabledState> enabledState = RxField.withInitialValue(EnabledState.ACTIVE);
 
 
     /**
      * Create a new Node with given name, description and feature-space.
      *
-     * By default, the node is {@link EnabledState#ACTIVE}.
+     * By default, the node is {@link Status#ACTIVE}.
      *
      * @param name        the node's name.
      * @param description the node's description.
      * @param featureSpace the node's feature space.
-     * @throws NullPointerException if name or description is null.
+     * @throws NullPointerException if any parameter is null.
      */
-    public DataNode(String name, String description, FeatureSpace featureSpace) {
+    DataNode(String name, String description, FeatureSpace featureSpace) {
+        this(name, description, featureSpace, Status.ACTIVE);
+    }
+
+    /**
+     * Create a new Node with given name, description, feature-space and status.
+     *
+     * @param name        the node's name.
+     * @param description the node's description.
+     * @param featureSpace the node's feature space.
+     * @param status the node's status.
+     * @throws NullPointerException if any parameter is null.
+     */
+    DataNode(String name, String description, FeatureSpace featureSpace, Status status) {
         super(name, description);
         this.featureSpace = checkNotNull(featureSpace);
+        this.status = RxField.withInitialValue(checkNotNull(status));
+
+        this.mergedBranchStatuses = initMergedBranchStatuses(this.childNodes.toObservable(),
+            this.status.toObservable());
 
         bindActiveStateWithChildren();
+    }
+
+    /**
+     * Merge this node's status and the children's branch-statuses into a combined set and
+     * return a hot observable providing the current branch-state to new subscribers.
+     */
+    private Observable<Set<Status>> initMergedBranchStatuses(Observable<List<DataNode>> childNodes,
+        Observable<Status> status) {
+
+        // merge the children's branch-statuses into a combined set.
+        // - refresh for changed set of children (switchMap).
+        // - ensure to get an empty set if no child is available (just..emptySet vs. combineLatest)!
+        @SuppressWarnings("unchecked") // flatMap(child -> ((Set<Status>) child) is known to be safe.
+        Observable<Set<Status>> mergedChildStatuses = childNodes.switchMap(
+            children -> children.isEmpty() ? Observable.just(Collections.emptySet())
+                : Observable.combineLatest(children.stream()
+                                                   .map(DataNode::getMergedBranchStatuses)
+                                                   .collect(Collectors.toList()),
+                    childBranches -> Arrays.stream(childBranches)
+                                           .flatMap(child -> ((Set<Status>) child).stream())
+                                           .collect(Collectors.toSet())));
+
+        // merge this node's status with the children's statuses.
+        // the returned observable is hot and provides the current state to new subscribers.
+        return Observable.combineLatest(status, mergedChildStatuses,
+            (Status currentStatus, Set<Status> childStatuses) -> {
+                Set<Status> mergedStatuses = new TreeSet<>(childStatuses);
+                mergedStatuses.add(currentStatus);
+                return mergedStatuses;
+            }).distinctUntilChanged().replay(1).refCount();
+
+    }
+
+    /**
+     * Returns the nodes status (observable).
+     * @return the status-observable.
+     */
+    public Observable<Status> getStatus() {
+        return this.status.toObservable();
+    }
+
+    /**
+     * Set a new status if the current status is not protected ({@link Status#isProtected()}, e.g. ACTIVE or DISABLED).
+     * @param newStatus the new status
+     * @return true if the new status was set.
+     * @see #setStatus(Status, boolean)
+     */
+    public boolean setStatus(Status newStatus){
+        return setStatus(newStatus, false);
+    }
+
+    /**
+     * Set a new status.
+     * @param newStatus the new status
+     * @param overwriteProtected if true, set status even if current status is protected ({@link Status#isProtected()}, e.g. REJECTED or INVALID).
+     * @return true if the new status was set.
+     */
+    public boolean setStatus(Status newStatus, boolean overwriteProtected) {
+        synchronized (this.status) {
+            if (!this.status.getValue().isProtected() || overwriteProtected) {
+                // only set the new status if the current status is not a protected status
+                // or if the overwrite flag is set!
+                this.status.setValue(newStatus);
+                return true;
+            } else {
+                return false;
+            }
+        }
+    }
+
+    public Observable<Set<Status>> getMergedBranchStatuses() {
+        return this.mergedBranchStatuses;
     }
 
 
@@ -51,6 +147,7 @@ public abstract class DataNode extends Named.BaseImpl implements Named{
      * @return a (non-empty) {@link Observable} representing changes (w.r.t. {@link Object#equals(Object)}) to the node's active-state,
      * including the last value before subscribing.
      */
+    @Deprecated
     public final RxFieldReadOnly<EnabledState> getEnabledState() {
         return this.enabledState.toReadOnlyView();
     }
@@ -60,6 +157,7 @@ public abstract class DataNode extends Named.BaseImpl implements Named{
      *
      * @param active {@code true} for setting {@link EnabledState#ACTIVE}, {@code false} for setting {@link EnabledState#DISABLED}.
      */
+    @Deprecated
     public final DataNode setEnabled(boolean active) {
         this.enabledState.setValue(active?EnabledState.ACTIVE:EnabledState.DISABLED);
         return this;
@@ -88,6 +186,7 @@ public abstract class DataNode extends Named.BaseImpl implements Named{
     /**
      * Initialize the binding of the node's activeState to and from the node's children.
      */
+    @Deprecated
     private void bindActiveStateWithChildren() {
         Observable<List<DataNode>> children = getChildNodes().toObservable();
 
@@ -138,7 +237,22 @@ public abstract class DataNode extends Named.BaseImpl implements Named{
      * The node's state describing whether it is considered {@code ACTIVE} or {@code DISABLED}.
      * The third state {@code PARTIAL} is relevant for nodes containing children, where the children aren't in a uniform state.
      */
+    @Deprecated
     public enum EnabledState {
         ACTIVE, DISABLED, PARTIAL
+    }
+
+    public enum Status {
+        ACTIVE(false), DISABLED(false), REJECTED(true), INVALID(true);
+
+        private final boolean isProtected;
+
+        Status(boolean isProtected) {
+            this.isProtected = isProtected;
+        }
+
+        public boolean isProtected() {
+            return isProtected;
+        }
     }
 }

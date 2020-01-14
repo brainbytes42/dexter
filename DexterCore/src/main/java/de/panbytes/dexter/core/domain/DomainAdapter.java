@@ -1,6 +1,10 @@
 package de.panbytes.dexter.core.domain;
 
-import de.panbytes.dexter.core.*;
+import static com.google.common.base.Preconditions.checkNotNull;
+
+import de.panbytes.dexter.core.AppContext;
+import de.panbytes.dexter.core.ClassLabel;
+import de.panbytes.dexter.core.DataSourceActions;
 import de.panbytes.dexter.core.data.DataEntity;
 import de.panbytes.dexter.core.data.DataNode;
 import de.panbytes.dexter.core.data.DataSource;
@@ -11,31 +15,42 @@ import de.panbytes.dexter.lib.util.reactivex.extensions.RxFieldReadOnly;
 import de.panbytes.dexter.util.Named;
 import de.panbytes.dexter.util.RxJavaUtils;
 import io.reactivex.Observable;
+import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.functions.BiFunction;
 import io.reactivex.schedulers.Schedulers;
 import io.reactivex.subjects.BehaviorSubject;
 import io.reactivex.subjects.PublishSubject;
 import io.reactivex.subjects.Subject;
-import javafx.scene.Node;
-
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import static com.google.common.base.Preconditions.checkNotNull;
+import javafx.scene.Node;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public abstract class DomainAdapter extends Named.BaseImpl implements Named {
+
+    private static final Logger log = LoggerFactory.getLogger(DomainAdapter.class);
 
     private final DataSourceActions dataSourceActions = new DataSourceActions();
     private final RxFieldCollection<List<FilterModule>, FilterModule> filterModules = RxFieldCollection.withInitialValue(new ArrayList<>(),
                                                                                                                          ArrayList::new);
+    private final AppContext appContext;
+    private final RxField<Optional<FeatureSpace>> featureSpace;
     private final Observable<Optional<DataSource>> rootDataSource;
     private final Observable<List<DomainDataEntity>> filteredDomainData;
-    private final RxField<Optional<FeatureSpace>> featureSpace = RxField.initiallyEmpty();
-    private final AppContext appContext;
     private final Observable<List<DomainDataEntity>> domainData;
 
+    private final CompositeDisposable disposable = new CompositeDisposable();
+
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     public DomainAdapter(String name, String description, AppContext appContext) {
         super(name, description);
 
@@ -43,35 +58,30 @@ public abstract class DomainAdapter extends Named.BaseImpl implements Named {
 
 
         /*
-        Update rootDataDource for new FeatureSpaces
+        Update rootDataSource for new FeatureSpaces (root is empty, if featurespace is empty!)
          */
+        this.featureSpace = RxField.initiallyEmpty();
         this.rootDataSource = this.featureSpace.toObservable()
                                                .map(featureSpaceOptional -> featureSpaceOptional.map(
                                                        featureSpace -> new DataSource("Root", "", featureSpace)))
                                                .replay(1)
                                                .autoConnect(0);
 
-        this.rootDataSource.subscribe(dataSource -> System.out.println("DomainAdapter / RootDataSource: " + dataSource)); //TODO remove
+        // logging...
         this.featureSpace.toObservable()
-                         .subscribe(featureSpace -> System.out.println("DomainAdapter / FeatureSpace: " + featureSpace)); //TODO remove
+                         .subscribe(featureSpace -> log.info("FeatureSpace: " + featureSpace));
+        this.rootDataSource.subscribe(dataSource -> log.info("RootDataSource: " + dataSource));
 
         /*
-        Default Filter for Rejected Data
+        Filter for Rejected Data
          */
-        this.appContext.getSettingsRegistry()
-                       .getDomainSettings()
-                       .rejectedClassLabel()
-                       .toObservable()
-                       .map(rejectedLabel -> new FilterModule("Filter Rejected", "Exclude rejected Entities") {
-                           @Override
-                           public boolean accept(DomainDataEntity entity) {
-                               return entity.getClassLabel().getValue().map(lbl -> !lbl.getLabel().equals(rejectedLabel)).orElse(true);
-                           }
-                       })
-                       .scan(Collections.<FilterModule>emptyList(),
-                             (prev, curr) -> Arrays.asList(prev.isEmpty() ? null : prev.get(1), curr))
-                       .skip(1)
-                       .subscribe(filterUpdate -> replaceDataFilter(filterUpdate.get(0), filterUpdate.get(1)));
+        RxFieldReadOnly<String> rejectedClassLabel = this.appContext.getSettingsRegistry()
+                                                                    .getDomainSettings()
+                                                                    .rejectedClassLabel();
+        RejectLabelFilterModule rejectedFilter = new RejectLabelFilterModule("Filter Rejected",
+            "Exclude rejected Entities", rejectedClassLabel.getValue());
+        rejectedClassLabel.toObservable().subscribe(rejectedFilter::setRejectedLabel);
+        addDataFilter(rejectedFilter);
 
 
         /*
@@ -245,6 +255,19 @@ public abstract class DomainAdapter extends Named.BaseImpl implements Named {
         return this.filteredDomainData.switchMap(entities -> filterLabeled(labeled, entities)).hide();
     }
 
+    public Observable<Set<ClassLabel>> getAllClassLabels() {
+        return getDomainData().switchMap(
+            entities -> RxJavaUtils.combineLatest(entities, t -> t.getClassLabel().toObservable(),
+                labelOpts -> labelOpts.stream()
+                                      .filter(Optional::isPresent)
+                                      .map(Optional::get)
+                                      .collect(Collectors.toSet())))
+                              .distinctUntilChanged()
+                              .replay(1)
+                              .refCount();
+    }
+
+    @Deprecated
     public Observable<List<Optional<ClassLabel>>> getClassLabels() {
         return getRootDataSource().switchMap(dataSourceOpt -> dataSourceOpt.map(dataSource -> {
             return dataSource.getSubtreeDataEntities()
@@ -292,6 +315,32 @@ public abstract class DomainAdapter extends Named.BaseImpl implements Named {
         boolean isEnabled() {
             return this.enabled.blockingFirst();
         }
+
+        protected final void notifyForUpdate(){
+            this.updates.onNext(this);
+        }
     }
 
+    private static class RejectLabelFilterModule extends FilterModule {
+
+        private String rejectedLabel;
+
+        RejectLabelFilterModule(String name, String description, String rejectedLabel) {
+            super(name, description);
+            this.rejectedLabel = checkNotNull(rejectedLabel);
+        }
+
+        public void setRejectedLabel(String rejectedLabel) {
+            this.rejectedLabel = checkNotNull(rejectedLabel);
+            notifyForUpdate();
+        }
+
+        @Override
+        public boolean accept(DomainDataEntity entity) {
+            return entity.getClassLabel()
+                         .getValue()
+                         .map(lbl -> !lbl.getLabel().equals(this.rejectedLabel))
+                         .orElse(true);
+        }
+    }
 }

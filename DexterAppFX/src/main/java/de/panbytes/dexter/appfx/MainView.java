@@ -703,9 +703,10 @@ public class MainView {
         ((ValueAxis) this.scatterChart.getYAxis()).setMinorTickVisible(false);
 
         this.dexterModel.getCurrentInspectionEntity().toObservable().subscribe(optEntity -> {
-            List<Data<Double, Double>> selection = optEntity.map(this.entity2chartData::get)
-                .map(Collections::singletonList)
-                .orElse(Collections.emptyList());
+            List<Data<Double, Double>> selection = optEntity.flatMap(
+                key -> Optional.ofNullable(this.entity2chartData.get(key)))
+                                                            .map(Collections::singletonList)
+                                                            .orElse(Collections.emptyList());
             this.scatterChart.setCurrentSelection(selection);
         });
     }

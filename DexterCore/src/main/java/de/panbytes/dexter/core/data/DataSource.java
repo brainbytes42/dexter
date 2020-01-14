@@ -44,6 +44,22 @@ public class DataSource extends DataNode {
         this.subtreeDataEntities = bindSubtreeDataEntities();
     }
 
+    /**
+     * Create a new {@code DataSource} with the given name.
+     *
+     * @param name the DataSource's name.
+     * @param status sthe initial status.
+     * @throws NullPointerException if the name is null.
+     * @see DataNode#DataNode(String, String, FeatureSpace, Status)
+     */
+    public DataSource(String name, String description, FeatureSpace featureSpace, Status status) {
+        super(name, description, featureSpace, status);
+
+        bindChildNodesToChildSourcesAndDataEntities();
+
+        this.subtreeDataEntities = bindSubtreeDataEntities();
+    }
+
     private Observable<List<DomainDataEntity>> bindSubtreeDataEntities() {
 
         Observable<List<DomainDataEntity>> childSubtreeEntities = this.childDataSources.toObservable().switchMap(childSources -> {
