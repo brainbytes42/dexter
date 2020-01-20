@@ -88,7 +88,7 @@ subprojects {
 		
 
 //		compile 'de.brainbytes.common:Papaya'
-		compile 'com.github.brainbytes42:papaya:master-SNAPSHOT'
+//		compile 'com.github.brainbytes42:papaya:master-SNAPSHOT'
 
 
 		// Logging( SLF4J & Logback )

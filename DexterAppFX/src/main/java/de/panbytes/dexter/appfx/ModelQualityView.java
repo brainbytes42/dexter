@@ -1,5 +1,7 @@
 package de.panbytes.dexter.appfx;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import com.google.common.collect.ArrayTable;
 import de.panbytes.dexter.appfx.misc.WindowSizePersistence;
 import de.panbytes.dexter.core.ClassLabel;
@@ -14,6 +16,16 @@ import io.reactivex.rxjavafx.schedulers.JavaFxScheduler;
 import io.reactivex.schedulers.Schedulers;
 import io.reactivex.subjects.PublishSubject;
 import io.reactivex.subjects.Subject;
+import java.io.IOException;
+import java.text.Collator;
+import java.util.Comparator;
+import java.util.EventObject;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
@@ -34,18 +46,9 @@ import javafx.scene.control.Label;
 import javafx.scene.control.Tooltip;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
-import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
-
-import java.io.IOException;
-import java.text.Collator;
-import java.util.*;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 import javafx.util.converter.PercentageStringConverter;
-
-import static com.google.common.base.Preconditions.checkNotNull;
 
 public class ModelQualityView extends Application {
 
@@ -386,15 +389,12 @@ public class ModelQualityView extends Application {
                                                                                                 .getFilteredDomainData()
                                                                                : this.dexterCore.getDomainAdapter().getDomainData())
                                                     .flatMap(domainDataEntities -> RxJavaUtils.combineLatest(domainDataEntities,
-                                                                                                             entity -> entity.getClassLabel()
-                                                                                                                             .toObservable(),
-                                                                                                             classLabelOpts -> classLabelOpts
-                                                                                                                     .parallelStream()
-                                                                                                                     .collect(
-                                                                                                                             Collectors.groupingBy(
-                                                                                                                                     label -> label,
-                                                                                                                                     Collectors
-                                                                                                                                             .counting()))))
+                                                        entity -> entity.getClassLabel().toObservable())
+                                                                                              .map(classLabelOpts -> classLabelOpts.parallelStream()
+                                                                                                                                   .collect(
+                                                                                                                                       Collectors.groupingBy(
+                                                                                                                                           label -> label,
+                                                                                                                                           Collectors.counting()))))
                                                     .debounce(100, TimeUnit.MILLISECONDS)
                                                     .subscribe(classLabelCount -> {
 

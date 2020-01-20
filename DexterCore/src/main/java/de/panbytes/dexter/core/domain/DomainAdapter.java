@@ -7,6 +7,7 @@ import de.panbytes.dexter.core.ClassLabel;
 import de.panbytes.dexter.core.DataSourceActions;
 import de.panbytes.dexter.core.data.DataEntity;
 import de.panbytes.dexter.core.data.DataNode;
+import de.panbytes.dexter.core.data.DataNode.Status;
 import de.panbytes.dexter.core.data.DataSource;
 import de.panbytes.dexter.core.data.DomainDataEntity;
 import de.panbytes.dexter.lib.util.reactivex.extensions.RxField;
@@ -29,6 +30,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javafx.scene.Node;
@@ -45,8 +47,9 @@ public abstract class DomainAdapter extends Named.BaseImpl implements Named {
     private final AppContext appContext;
     private final RxField<Optional<FeatureSpace>> featureSpace;
     private final Observable<Optional<DataSource>> rootDataSource;
-    private final Observable<List<DomainDataEntity>> filteredDomainData;
-    private final Observable<List<DomainDataEntity>> domainData;
+    @Deprecated private final Observable<List<DomainDataEntity>> filteredDomainData;
+    @Deprecated private final Observable<List<DomainDataEntity>> domainData;
+    private final Observable<Set<DomainDataEntity>> activeDomainData;
 
     private final CompositeDisposable disposable = new CompositeDisposable();
 
@@ -85,7 +88,7 @@ public abstract class DomainAdapter extends Named.BaseImpl implements Named {
 
 
         /*
-        Assemble filteredDomainData: ( domainData + updatingFiltersList ) <- domainDataFilterFunction
+        Assemble filteredDomainData: ( getDataSet + updatingFiltersList ) <- domainDataFilterFunction
          */
         // active domain data
         this.domainData = this.rootDataSource.switchMap(dataSourceOptional -> dataSourceOptional.map(DataSource::getSubtreeDataEntities)
@@ -93,8 +96,7 @@ public abstract class DomainAdapter extends Named.BaseImpl implements Named {
                                                                                                         Collections.emptyList()))
                                                                                                 .switchMap(
                                                                                                         entities -> RxJavaUtils.combineLatest(
-                                                                                                                entities.stream()
-                                                                                                                        .map(entity -> entity
+                                                                                                                entities,entity -> entity
                                                                                                                                 .getEnabledState()
                                                                                                                                 .toObservable()
                                                                                                                                 .map(state ->
@@ -103,14 +105,13 @@ public abstract class DomainAdapter extends Named.BaseImpl implements Named {
                                                                                                                                              ? Optional
                                                                                                                                                      .of(entity)
                                                                                                                                              : Optional.<DomainDataEntity>empty()))
-                                                                                                                        .collect(
-                                                                                                                                Collectors.toList()),
+                                                                                                                        ).map(
                                                                                                                 entityOpt -> entityOpt.stream()
                                                                                                                                       .filter(Optional::isPresent)
                                                                                                                                       .map(Optional::get)
                                                                                                                                       .collect(
                                                                                                                                               Collectors
-                                                                                                                                                      .toList()))))
+                                                                                                                                                      .toList())))
                                              .observeOn(Schedulers.io())
                                              .replay(1)
                                              .autoConnect(0)
@@ -120,7 +121,7 @@ public abstract class DomainAdapter extends Named.BaseImpl implements Named {
 
         Observable<List<FilterModule>> updatingFiltersList = this.filterModules.toObservable()
                                                                                .observeOn(Schedulers.io())
-                                                                               .debounce(100, TimeUnit.MILLISECONDS)
+                                                                               .debounce(300, TimeUnit.MILLISECONDS)
                                                                                .switchMap(filtersList -> {
                                                                                    return filtersList.isEmpty()
                                                                                           ? Observable.just(Collections.emptyList())
@@ -178,16 +179,36 @@ public abstract class DomainAdapter extends Named.BaseImpl implements Named {
                                                         .flatMap(entity -> entity.getClassLabel().toObservable().skip(1).map(__ -> entity)))
                        .subscribe(changedLabelEntity -> this.appContext.getInspectionHistory().markInspected(changedLabelEntity));
 
+        //
+        // activeDomainData : Observable<Set<DomainDataEntity>>
+        //
+        activeDomainData = getDataSet(status -> status == Status.ACTIVE).replay(1).refCount();
+    }
+
+    public Observable<Set<DomainDataEntity>> getDataSetActive() {
+        return this.activeDomainData;
+    }
+
+    public Observable<Set<DomainDataEntity>> getDataSet(Predicate<Status> includedStatuses) {
+        return this.rootDataSource.switchMap(
+            rootDS -> rootDS.map(DataSource::getSubtreeDataEntities).orElse(Observable.just(Collections.emptyList())))
+                                              .switchMap(allEntities -> RxJavaUtils.combineLatest(allEntities,
+                                                  dataEntity -> dataEntity.getStatus()
+                                                                          .map(status -> includedStatuses.test(status) ? Optional.of(dataEntity)
+                                                                          : Optional.<DomainDataEntity>empty())).map(
+                                                  entitiesPresentAreActive -> entitiesPresentAreActive.stream()
+                                                                                                      .filter(Optional::isPresent)
+                                                                                                      .map(Optional::get)
+                                                                                                      .collect(Collectors.toSet())))
+                                              .distinctUntilChanged();
     }
 
     private static Observable<List<DomainDataEntity>> filterLabeled(boolean labeled, List<DomainDataEntity> entities) {
-        return RxJavaUtils.combineLatest(entities.stream()
-                                                 .map(entity -> entity.getClassLabel()
+        return RxJavaUtils.combineLatest(entities, entity -> entity.getClassLabel()
                                                                       .toObservable()
                                                                       .map(labelOpt -> labelOpt.isPresent() == labeled
                                                                                        ? Optional.of(entity)
-                                                                                       : Optional.<DomainDataEntity>empty()))
-                                                 .collect(Collectors.toList()), entityOpt -> entityOpt.stream()
+                                                                                       : Optional.<DomainDataEntity>empty())).map( entityOpt -> entityOpt.stream()
                                                                                                       .filter(Optional::isPresent)
                                                                                                       .map(Optional::get)
                                                                                                       .collect(Collectors.toList()));
@@ -243,7 +264,7 @@ public abstract class DomainAdapter extends Named.BaseImpl implements Named {
     }
 
     /**
-     * Return the domain Data (see getDomainData), but filtered by FilterModules.
+     * Return the domain Data (see getDataSet), but filtered by FilterModules.
      *
      * @return
      */
@@ -257,7 +278,7 @@ public abstract class DomainAdapter extends Named.BaseImpl implements Named {
 
     public Observable<Set<ClassLabel>> getAllClassLabels() {
         return getDomainData().switchMap(
-            entities -> RxJavaUtils.combineLatest(entities, t -> t.getClassLabel().toObservable(),
+            entities -> RxJavaUtils.combineLatest(entities, t -> t.getClassLabel().toObservable()).map(
                 labelOpts -> labelOpts.stream()
                                       .filter(Optional::isPresent)
                                       .map(Optional::get)
@@ -271,10 +292,7 @@ public abstract class DomainAdapter extends Named.BaseImpl implements Named {
     public Observable<List<Optional<ClassLabel>>> getClassLabels() {
         return getRootDataSource().switchMap(dataSourceOpt -> dataSourceOpt.map(dataSource -> {
             return dataSource.getSubtreeDataEntities()
-                             .switchMap(entities -> RxJavaUtils.combineLatest(entities.stream()
-                                                                                      .map(DataEntity::getClassLabel)
-                                                                                      .map(RxFieldReadOnly::toObservable)
-                                                                                      .collect(Collectors.toList()),
+                             .switchMap(entities -> RxJavaUtils.combineLatest(entities, e->e.getClassLabel().toObservable()).map(
                                                                               optLabels -> optLabels.stream()
                                                                                                     .distinct()
                                                                                                     .sorted(Comparator.comparing(
@@ -290,6 +308,7 @@ public abstract class DomainAdapter extends Named.BaseImpl implements Named {
         return Optional.empty();
     }
 
+    @Deprecated
     public static abstract class FilterModule extends BaseImpl implements Named {
 
         private final Subject<Boolean> enabled = BehaviorSubject.createDefault(true);
