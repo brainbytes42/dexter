@@ -32,10 +32,10 @@ import java.util.stream.Collectors;
 import static com.google.common.base.Preconditions.*;
 import static de.panbytes.dexter.core.model.classification.CrossValidation.CrossValidationResult;
 
-public class ActiveLearning {
+public class ActiveLearningModel {
 
     public static final ClassificationUncertaintyMeasure CLASSIFICATION_UNCERTAINTY_MEASURE = ClassificationUncertaintyMeasure.ENTROPY;
-    private static final Logger log = LoggerFactory.getLogger(ActiveLearning.class);
+    private static final Logger log = LoggerFactory.getLogger(ActiveLearningModel.class);
     private Observable<Map<DataEntity, ClassLabel>> modelSuggestedLabels;
     private AppContext appContext;
     @Deprecated private Supplier<Classifier> classifierSupplier;
@@ -44,12 +44,12 @@ public class ActiveLearning {
     private Observable<List<CrossValidationUncertainty>> existingLabelsUncertainty;
 
 
-    public ActiveLearning(Supplier<Classifier> classifierSupplier, List<Optional<ClassLabel>> classLabelsOpt) {
+    public ActiveLearningModel(Supplier<Classifier> classifierSupplier, List<Optional<ClassLabel>> classLabelsOpt) {
         this.classifierSupplier = checkNotNull(classifierSupplier);
         this.classLabels = classLabelsOpt.stream().filter(Optional::isPresent).map(Optional::get).collect(Collectors.toList());
     }
 
-    public ActiveLearning(ClassificationModel classificationModel, AppContext appContext) {
+    public ActiveLearningModel(ClassificationModel classificationModel, AppContext appContext) {
 
         this.appContext = appContext;
 
@@ -76,8 +76,7 @@ public class ActiveLearning {
 
         this.existingLabelsUncertainty = Observable.combineLatest(classificationModel.getCrossValidationResults(),
                                                                   this.appContext.getInspectionHistory()
-                                                                                 .getLabeledEntities()
-                                                                                 .toObservable(),
+                                                                                 .getLabeledEntities(),
                                                                   (crossValidationResultOpt, checkedEntities) -> {
                                                                       return crossValidationResultOpt.map(
                                                                               CrossValidationResult::getClassificationResults)
@@ -87,6 +86,7 @@ public class ActiveLearning {
                                                                                                                                         .filter(entry -> !checkedEntities
                                                                                                                                                 .contains(
                                                                                                                                                         entry.getKey()))
+//                                                                                                                                        .filter(entry -> entry.getKey().getClassLabel().getValue().isPresent())
                                                                                                                                         .map(entry -> new CrossValidationUncertainty(
                                                                                                                                                 entry.getKey(),
                                                                                                                                                 entry.getValue()))
@@ -312,7 +312,7 @@ public class ActiveLearning {
 
                 setMessage("Calculate probabilities...");
 
-                Table<DomainDataEntity, ClassLabel, Double> table = ArrayTable.create(evaluationSetData, ActiveLearning.this.classLabels);
+                Table<DomainDataEntity, ClassLabel, Double> table = ArrayTable.create(evaluationSetData, ActiveLearningModel.this.classLabels);
 
                 for (int i = 0; i < evaluationSet.size(); i++) {
                     setProgress(i + 1, evaluationSet.size());

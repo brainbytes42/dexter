@@ -3,10 +3,13 @@ package de.panbytes.dexter.core;
 import de.panbytes.dexter.core.data.DataEntity;
 import de.panbytes.dexter.lib.util.reactivex.extensions.RxFieldCollection;
 import de.panbytes.dexter.lib.util.reactivex.extensions.RxFieldReadOnly;
+import de.panbytes.dexter.util.RxJavaUtils;
 import io.reactivex.Observable;
 
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class InspectionHistory {
 
@@ -30,8 +33,8 @@ public class InspectionHistory {
         this.labeledEntities.add(entity);
     }
 
-    public RxFieldReadOnly<Set<DataEntity>> getLabeledEntities() {
-        return this.labeledEntities.toReadOnlyView();
+    public Observable<Set<DataEntity>> getLabeledEntities() {
+        return this.labeledEntities.toObservable().compose(RxJavaUtils.deepFilter(DataEntity::classLabelObs, Optional::isPresent, Collectors.toSet()));
     }
 
     public void clear() {

@@ -6,6 +6,7 @@ import de.panbytes.dexter.core.domain.FeatureSpace;
 import de.panbytes.dexter.lib.util.reactivex.extensions.RxField;
 import de.panbytes.dexter.lib.util.reactivex.extensions.RxFieldReadOnly;
 
+import io.reactivex.Observable;
 import java.util.Arrays;
 import java.util.Optional;
 
@@ -65,6 +66,10 @@ public abstract class DataEntity extends DataNode {
         return this.coordinates.toReadOnlyView();
     }
 
+    public final Observable<double[]> coordinatesObs() {
+        return getCoordinates().toObservable();
+    }
+
     /**
      * Set new coordinates for the entity.
      *
@@ -89,6 +94,10 @@ public abstract class DataEntity extends DataNode {
      * @return the class label, if available.
      */
     public abstract RxFieldReadOnly<Optional<ClassLabel>> getClassLabel();
+
+    public final Observable<Optional<ClassLabel>> classLabelObs() {
+        return getClassLabel().toObservable();
+    }
 
     /**
      * Set the entity's class label.

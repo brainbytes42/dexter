@@ -1,18 +1,13 @@
 package de.panbytes.dexter.core;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import de.panbytes.dexter.core.domain.DomainAdapter;
 import de.panbytes.dexter.core.model.DexterModel;
 import de.panbytes.dexter.plugin.DataExportPlugin;
-import de.panbytes.dexter.plugin.DexterPlugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.bridge.SLF4JBridgeHandler;
-
-import java.util.LinkedHashMap;
-import java.util.Optional;
-import java.util.function.Function;
-
-import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * @author Fabian Krippendorff
@@ -25,7 +20,7 @@ public class DexterCore {
     private static final Logger log = LoggerFactory.getLogger(DexterCore.class);
 
     static {
-        /**
+        /*
          * install jul-to-slf4j bridge
          *
          * @see http://www.slf4j.org/legacy.html
@@ -42,20 +37,16 @@ public class DexterCore {
 
     public DexterCore(final DomainAdapter domainAdapter, AppContext appContext) {
 
-        this.domainAdapter = checkNotNull(domainAdapter, "DomainAdapter is null!");
-        this.appContext = appContext;
+        this.domainAdapter = checkNotNull(domainAdapter, "DomainAdapter may not be null!");
+        this.appContext = checkNotNull(appContext, "AppContext may not be null!");
 
-        this.dexterModel = new DexterModel(this.domainAdapter, this.appContext);
+        // create model
+        this.dexterModel = new DexterModel(domainAdapter, appContext);
 
         // register export plugin
-        this.appContext.getPluginRegistry().add(new DataExportPlugin(this.domainAdapter));
+        // TODO: is this the best place to add plugins?
+        appContext.getPluginRegistry().add(new DataExportPlugin(this.domainAdapter));
 
-        // register plugins with settingsRegistry
-        this.appContext.getPluginRegistry().getPlugins().toObservable().subscribe(plugins -> {
-            LinkedHashMap<DexterPlugin, Optional<SettingsStorage>> pluginSettings = new LinkedHashMap<>();
-            plugins.forEach(plugin -> pluginSettings.put(plugin, plugin.getPluginSettings()));
-            this.appContext.getSettingsRegistry().setPluginSettings(pluginSettings);
-        });
     }
 
     public AppContext getAppContext() {

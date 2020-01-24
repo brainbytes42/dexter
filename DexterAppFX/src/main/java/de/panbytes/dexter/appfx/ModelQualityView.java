@@ -6,7 +6,7 @@ import com.google.common.collect.ArrayTable;
 import de.panbytes.dexter.appfx.misc.WindowSizePersistence;
 import de.panbytes.dexter.core.ClassLabel;
 import de.panbytes.dexter.core.DexterCore;
-import de.panbytes.dexter.core.activelearning.ActiveLearning;
+import de.panbytes.dexter.core.activelearning.ActiveLearningModel;
 import de.panbytes.dexter.core.model.classification.ModelEvaluation;
 import de.panbytes.dexter.util.RxJavaUtils;
 import io.reactivex.Observable;
@@ -119,16 +119,16 @@ public class ModelQualityView extends Application {
 
         final int bucketSize = 10;
 
-        Observable.combineLatest(this.dexterCore.getDexterModel().getActiveLearning().getExistingLabelsUncertainty(),
-                                 this.dexterCore.getDexterModel().getActiveLearning().getClassificationUncertainty(),
+        Observable.combineLatest(this.dexterCore.getDexterModel().getActiveLearningModel().getExistingLabelsUncertainty(),
+                                 this.dexterCore.getDexterModel().getActiveLearningModel().getClassificationUncertainty(),
                                  (existingUncertainty, unlabeledUncertainty) -> {
 
                                      final HashMap<String, List<Double>> uncertainties = new HashMap<>();
                                      uncertainties.put("labeled", existingUncertainty.stream()
-                                                                                     .map(ActiveLearning.CrossValidationUncertainty::getUncertaintyValue)
+                                                                                     .map(ActiveLearningModel.CrossValidationUncertainty::getUncertaintyValue)
                                                                                      .collect(Collectors.toList()));
                                      uncertainties.put("unlabeled", unlabeledUncertainty.stream()
-                                                                                        .map(ActiveLearning.ClassificationUncertainty::getUncertaintyValue)
+                                                                                        .map(ActiveLearningModel.ClassificationUncertainty::getUncertaintyValue)
                                                                                         .collect(Collectors.toList()));
 
 
@@ -192,11 +192,11 @@ public class ModelQualityView extends Application {
         //        seriesLabeled.setName("labeled");
         //        seriesLabeled.dataProperty()
         //                     .bind(JavaFxObserver.toBinding(this.dexterCore.getDexterModel()
-        //                                                                   .getActiveLearning()
+        //                                                                   .getActiveLearningModel()
         //                                                                   .getExistingLabelsUncertainty()
         //                                                                   .map(Collection::stream)
         //                                                                   .map(stream -> stream.map(
-        //                                                                           ActiveLearning.CrossValidationUncertainty::getUncertaintyValue)
+        //                                                                           ActiveLearningModel.CrossValidationUncertainty::getUncertaintyValue)
         //                                                                                        // TODO below is same as for unlabeled...
         //                                                                                        .map(p -> p * 100 - Double.MIN_VALUE/*make 1 -> 0.9999..*/)
         //                                                                                        .collect(Collectors.groupingBy(p -> Math.floor(
@@ -234,10 +234,10 @@ public class ModelQualityView extends Application {
         //        /*seriesUnlabeled.dataProperty()
         //                       .bind(JavaFxObserver.toBinding(*/
         //        this.dexterCore.getDexterModel()
-        //                       .getActiveLearning()
+        //                       .getActiveLearningModel()
         //                       .getClassificationUncertainty()
         //                       .map(Collection::stream)
-        //                       .map(stream -> stream.map(ActiveLearning.ClassificationUncertainty::getUncertaintyValue)
+        //                       .map(stream -> stream.map(ActiveLearningModel.ClassificationUncertainty::getUncertaintyValue)
         //                                            .map(p -> p * 100 - Double.MIN_VALUE)
         //                                            .collect(Collectors.groupingBy(p -> Math.floor(p / bucketSize) * bucketSize,
         //                                                                           Collectors.counting())))

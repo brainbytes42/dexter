@@ -1,7 +1,10 @@
 package de.panbytes.dexter.core;
 
 import de.panbytes.dexter.ext.task.TaskMonitor;
+import de.panbytes.dexter.plugin.DexterPlugin;
 import de.panbytes.dexter.plugin.PluginRegistry;
+import java.util.LinkedHashMap;
+import java.util.Optional;
 
 public class AppContext {
 
@@ -15,6 +18,16 @@ public class AppContext {
         this.pluginRegistry = new PluginRegistry();
         this.settingsRegistry = new SettingsRegistry(generalSettings, domainSettings);
         this.inspectionHistory = new InspectionHistory();
+
+        registerPluginsWithSettingsRegistry(this.pluginRegistry, this.settingsRegistry);
+    }
+
+    private void registerPluginsWithSettingsRegistry(PluginRegistry pluginRegistry, SettingsRegistry settingsRegistry) {
+        pluginRegistry.getPlugins().toObservable().subscribe(plugins -> {
+            LinkedHashMap<DexterPlugin, Optional<SettingsStorage>> pluginSettings = new LinkedHashMap<>();
+            plugins.forEach(plugin -> pluginSettings.put(plugin, plugin.getPluginSettings()));
+            settingsRegistry.setPluginSettings(pluginSettings);
+        });
     }
 
     public TaskMonitor getTaskMonitor() {

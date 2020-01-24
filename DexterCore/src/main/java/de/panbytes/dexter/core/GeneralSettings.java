@@ -11,16 +11,12 @@ import java.util.function.Supplier;
 
 public class GeneralSettings implements SettingsStorage {
 
-
-    private final String domainIdentifier;
-
     private final RxPreferenceDouble perplexity;
     private final RxPreferenceBoolean classificationOnFilteredData;
 
     private Supplier<Node> viewSupplier;
 
     public GeneralSettings(String domainIdentifier) {
-        this.domainIdentifier = domainIdentifier;
 
         this.perplexity = RxPreference.createForIdentifier(GeneralSettings.class, domainIdentifier, "tsnePerplexity").buildWithDefaultValue(30.);
         this.classificationOnFilteredData = RxPreference.createForIdentifier(GeneralSettings.class, domainIdentifier, "classificationOnFilteredData")

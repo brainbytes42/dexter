@@ -3,7 +3,7 @@ package de.panbytes.dexter.appfx;
 import de.panbytes.dexter.appfx.misc.WindowSizePersistence;
 import de.panbytes.dexter.core.ClassLabel;
 import de.panbytes.dexter.core.DexterCore;
-import de.panbytes.dexter.core.activelearning.ActiveLearning;
+import de.panbytes.dexter.core.activelearning.ActiveLearningModel;
 import de.panbytes.dexter.core.data.DataEntity;
 import de.panbytes.dexter.core.data.DataNode.Status;
 import de.panbytes.dexter.core.model.classification.Classifier;
@@ -151,7 +151,7 @@ public class InspectionView {
                                                                                                                        .map(lbl -> lbl.map(ClassLabel::toString)
                                                                                                                                       .orElse(
                                                                                                                                           MainView.EMPTY_CLASS_LABEL)),
-                                              this.dexterCore.getAppContext().getInspectionHistory().getLabeledEntities().toObservable(),
+                                              this.dexterCore.getAppContext().getInspectionHistory().getLabeledEntities(),
                                               (label, history) -> label + (history.contains(this.inspectionTarget) ? "  (" + CHECKMARK + ")" : ""))));
 
         this.uncertaintyTextField.textProperty()
@@ -159,7 +159,7 @@ public class InspectionView {
                                                                                      .toObservable()
                                                                                      .switchMap(classLabelOpt -> classLabelOpt.isPresent()
                                                                                          ? this.dexterCore.getDexterModel()
-                                                                                                          .getActiveLearning()
+                                                                                                          .getActiveLearningModel()
                                                                                                           .getExistingLabelsUncertainty()
                                                                                                           .map(Collection::stream)
                                                                                                           .map(stream -> stream.filter(
@@ -168,9 +168,9 @@ public class InspectionView {
                                                                                                                                             this.inspectionTarget))
                                                                                                                                .findAny())
                                                                                                           .map(opt -> opt.map(
-                                                                                                              ActiveLearning.CrossValidationUncertainty::getUncertaintyValue))
+                                                                                                              ActiveLearningModel.CrossValidationUncertainty::getUncertaintyValue))
                                                                                          : this.dexterCore.getDexterModel()
-                                                                                                          .getActiveLearning()
+                                                                                                          .getActiveLearningModel()
                                                                                                           .getClassificationUncertainty()
                                                                                                           .map(Collection::stream)
                                                                                                           .map(stream -> stream.filter(
@@ -179,7 +179,7 @@ public class InspectionView {
                                                                                                                                             this.inspectionTarget))
                                                                                                                                .findAny())
                                                                                                           .map(opt -> opt.map(
-                                                                                                              ActiveLearning.ClassificationUncertainty::getUncertaintyValue)))
+                                                                                                              ActiveLearningModel.ClassificationUncertainty::getUncertaintyValue)))
                                                                                      .observeOn(JavaFxScheduler.platform())
                                                                                      .map(uncertainty -> uncertainty.map(val -> val * 100)
                                                                                                                     .map(u -> String.format("%.1f %%", u))
@@ -286,7 +286,7 @@ public class InspectionView {
 
         Observable<Optional<ClassLabel>> classLabelObs = this.inspectionTarget.getClassLabel().toObservable();
         Observable<Optional<ClassLabel>> suggestionObs = this.dexterCore.getDexterModel()
-                                                                        .getActiveLearning()
+                                                                        .getActiveLearningModel()
                                                                         .getModelSuggestedLabels()
                                                                         .map(suggestionMap -> Optional.ofNullable(suggestionMap.get(this.inspectionTarget)));
         Disposable disposable;
@@ -313,8 +313,8 @@ public class InspectionView {
         disposable = Observable.merge(JavaFxObservable.actionEventsOf(this.enterNewLabelCustomMenuItemTextField),
             JavaFxObservable.actionEventsOf(this.enterNewLabelCustomMenuItemOkButton))
                                .map(__ -> this.enterNewLabelCustomMenuItemTextField.getText())
-                               .doAfterNext(__ -> this.enterNewLabelCustomMenuItemTextField.clear())
-                               .doAfterNext(__ -> this.labelAsMenuButton.hide())
+                               .doOnNext(__ -> this.enterNewLabelCustomMenuItemTextField.clear())
+                               .doOnNext(__ -> this.labelAsMenuButton.hide())
                                .doAfterNext(this.requestCloseView::onNext)
                                .map(labelText -> labelText.isEmpty() ? Optional.<ClassLabel>empty() : Optional.of(ClassLabel.labelFor(labelText)))
                                .subscribe(newLabel -> this.inspectionTarget.setClassLabel(newLabel.orElse(null)));
@@ -332,7 +332,7 @@ public class InspectionView {
 
         disposable = JavaFxObservable.actionEventsOf(this.confirmLabelButton)
                                      // make non-toggle
-                                     .doAfterNext(__ -> this.confirmLabelButton.setSelected(false))
+                                     .doOnNext(__ -> this.confirmLabelButton.setSelected(false))
                                      // close window
                                      .doAfterNext(this.requestCloseView::onNext)
                                      // TODO (?) convert to current label (not yet necessary...)
@@ -344,18 +344,21 @@ public class InspectionView {
         //
         // Button: Use / change to suggested Label
         //
-        disposable = Observable.combineLatest(classLabelObs, suggestionObs,
+        disposable = Observable.combineLatest(classLabelObs, suggestionObs, //
             (label, suggestion) -> label.map(__ -> "Change to").orElse("Use") + " suggested Label" + suggestion.map(s -> " [" + s + "]").orElse(""))
+                               .observeOn(JavaFxScheduler.platform())
                                .subscribe(text -> this.useSuggestedLabelButton.setText(text));
         this.lifecycleDisposable.add(disposable);
 
-        disposable = Observable.combineLatest(classLabelObs, suggestionObs, (label, suggestion) -> !suggestion.isPresent() || suggestion.equals(label))
+        disposable = Observable.combineLatest(classLabelObs, suggestionObs, //
+            (label, suggestion) -> !suggestion.isPresent() || suggestion.equals(label))
+                               .observeOn(JavaFxScheduler.platform())
                                .subscribe(disable -> this.useSuggestedLabelButton.setDisable(disable));
         this.lifecycleDisposable.add(disposable);
 
         disposable = JavaFxObservable.actionEventsOf(this.useSuggestedLabelButton)
                                      // make non-toggle
-                                     .doAfterNext(__ -> this.useSuggestedLabelButton.setSelected(false))
+                                     .doOnNext(__ -> this.useSuggestedLabelButton.setSelected(false))
                                      // close window
                                      .doAfterNext(this.requestCloseView::onNext)
                                      // convert to current suggestion
@@ -375,13 +378,12 @@ public class InspectionView {
         this.lifecycleDisposable.add(disposable);
 
         disposable = JavaFxObservable.actionEventsOf(this.rejectEntityButton)
-                                     // TODO remove first doOnNext (reject by label)
-                                     .doAfterNext(actionEvent -> this.inspectionTarget.setClassLabel(ClassLabel.labelFor(
-                                         this.dexterCore.getAppContext().getSettingsRegistry().getDomainSettings().rejectedClassLabel().getValue())))
                                      // make non-toggle
-                                     .doAfterNext(__ -> this.rejectEntityButton.setSelected(false))
+                                     .doOnNext(__ -> this.rejectEntityButton.setSelected(false))
                                      // close window
-                                     .doAfterNext(this.requestCloseView::onNext).subscribe(__ -> this.inspectionTarget.setStatus(Status.REJECTED));
+                                     .doAfterNext(this.requestCloseView::onNext)
+                                     // set status
+                                     .subscribe(__ -> this.inspectionTarget.setStatus(Status.REJECTED));
         this.lifecycleDisposable.add(disposable);
 
         //

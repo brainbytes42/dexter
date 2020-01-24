@@ -9,7 +9,6 @@ import java.util.Optional;
 
 public class DomainSettings implements SettingsStorage {
 
-
     private final String domainIdentifier;
     private final RxPreferenceString rejectedClassLabel;
 
