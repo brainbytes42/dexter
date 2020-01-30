@@ -7,6 +7,7 @@ package de.panbytes.dexter.appfx;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.common.base.Predicates;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.Comparators;
 import com.google.common.collect.HashBiMap;
@@ -18,6 +19,8 @@ import de.panbytes.dexter.core.ClassLabel;
 import de.panbytes.dexter.core.DataSourceActions;
 import de.panbytes.dexter.core.DexterCore;
 import de.panbytes.dexter.core.activelearning.ActiveLearningModel;
+import de.panbytes.dexter.core.activelearning.ActiveLearningModel.AbstractUncertainty;
+import de.panbytes.dexter.core.activelearning.ActiveLearningModel.CrossValidationUncertainty;
 import de.panbytes.dexter.core.data.DataEntity;
 import de.panbytes.dexter.core.data.DataSource;
 import de.panbytes.dexter.core.data.DomainDataEntity;
@@ -29,6 +32,7 @@ import de.panbytes.dexter.core.model.classification.ModelEvaluation;
 import de.panbytes.dexter.util.RxJavaUtils;
 import io.reactivex.Observable;
 import io.reactivex.disposables.CompositeDisposable;
+import io.reactivex.observables.ConnectableObservable;
 import io.reactivex.rxjavafx.observables.JavaFxObservable;
 import io.reactivex.rxjavafx.observers.JavaFxObserver;
 import io.reactivex.rxjavafx.schedulers.JavaFxScheduler;
@@ -337,15 +341,23 @@ public class MainView {
         /*
         Active Learning: Check Label
          */
-        this.checkLabelButton.disableProperty()
-                             .bind(JavaFxObserver.toBinding(this.dexterModel.getActiveLearningModel().getExistingLabelsUncertainty().map(Collection::isEmpty)));
+        ConnectableObservable<List<CrossValidationUncertainty>> uncheckedUncertainties = Observable.combineLatest(
+            this.dexterModel.getActiveLearningModel().getExistingLabelsUncertainty(), this.appContext.getInspectionHistory().getLabeledEntities(),
+            (crossValidationUncertainties, checkedEntities) -> crossValidationUncertainties.stream()
+                                                                                           .filter(Predicates.compose(checkedEntities::contains,
+                                                                                               AbstractUncertainty::getDataEntity).negate())
+                                                                                           .collect(Collectors.toList())).publish();
+
+        this.checkLabelButton.disableProperty().bind(JavaFxObserver.toBinding(uncheckedUncertainties.map(Collection::isEmpty)));
 
         JavaFxObservable.actionEventsOf(this.checkLabelButton)
-                        .switchMap(actionEvent -> this.dexterModel.getActiveLearningModel().getExistingLabelsUncertainty().firstElement().toObservable())
+                        .withLatestFrom(uncheckedUncertainties, (actionEvent, crossValidationUncertainties) -> crossValidationUncertainties)
                         .filter(list -> !list.isEmpty())
                         .map(list -> list.get(0))
                         .map(ActiveLearningModel.AbstractUncertainty::getDataEntity)
                         .subscribe(leastConfident -> InspectionView.createAndShow(this.dexterCore, leastConfident));
+
+        uncheckedUncertainties.connect();
 
         // reset history
         JavaFxObservable.actionEventsOf(this.clearCheckLabelHistoryMenuItem).subscribe(actionEvent -> this.appContext.getInspectionHistory().clear());

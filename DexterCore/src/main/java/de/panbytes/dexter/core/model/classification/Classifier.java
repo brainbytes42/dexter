@@ -48,11 +48,11 @@ public interface Classifier {
         private final Map<ClassLabel, Double> classLabelProbabilities = new HashMap<>();
 
         /**
-         * set probability to Double.POSITIVE_INFINITY
+         * set probability to 1
          * @param classLabel
          */
         public ClassificationResult(ClassLabel classLabel) {
-            this.classLabelProbabilities.put(classLabel, Double.POSITIVE_INFINITY);
+            this.classLabelProbabilities.put(classLabel, 1.0);
         }
 
         public ClassificationResult(Map<ClassLabel, Double> classLabelProbabilities) {
