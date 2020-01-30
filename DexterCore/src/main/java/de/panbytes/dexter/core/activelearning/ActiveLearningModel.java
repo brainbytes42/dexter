@@ -1,5 +1,10 @@
 package de.panbytes.dexter.core.activelearning;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
+import static de.panbytes.dexter.core.model.classification.CrossValidation.CrossValidationResult;
+
 import com.google.common.collect.ArrayTable;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
@@ -10,10 +15,25 @@ import de.panbytes.dexter.core.data.DataEntity;
 import de.panbytes.dexter.core.data.DomainDataEntity;
 import de.panbytes.dexter.core.domain.FeatureSpace;
 import de.panbytes.dexter.core.model.classification.ClassificationModel;
+import de.panbytes.dexter.core.model.classification.Classifier.ClassificationResult;
 import de.panbytes.dexter.ext.task.ObservableTask;
 import de.panbytes.dexter.ext.task.TaskMonitor;
 import io.reactivex.Observable;
 import io.reactivex.schedulers.Schedulers;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import weka.classifiers.Classifier;
@@ -22,15 +42,6 @@ import weka.core.Attribute;
 import weka.core.DenseInstance;
 import weka.core.Instances;
 import weka.core.Utils;
-
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
-
-import static com.google.common.base.Preconditions.*;
-import static de.panbytes.dexter.core.model.classification.CrossValidation.CrossValidationResult;
 
 public class ActiveLearningModel {
 
@@ -83,9 +94,9 @@ public class ActiveLearningModel {
                                                                                                      .map(ImmutableMultimap::asMap)
                                                                                                      .map(ImmutableMap::entrySet)
                                                                                                      .map(resultEntries -> resultEntries.stream()
-                                                                                                                                        .filter(entry -> !checkedEntities
-                                                                                                                                                .contains(
-                                                                                                                                                        entry.getKey()))
+//                                                                                                                                        .filter(entry -> !checkedEntities
+//                                                                                                                                                .contains(
+//                                                                                                                                                        entry.getKey()))
 //                                                                                                                                        .filter(entry -> entry.getKey().getClassLabel().getValue().isPresent())
                                                                                                                                         .map(entry -> new CrossValidationUncertainty(
                                                                                                                                                 entry.getKey(),
@@ -396,7 +407,7 @@ public class ActiveLearningModel {
      */
     enum ClassificationUncertaintyMeasure {
 
-        LEAST_CONFIDENT_PREDICTION(coll -> 1-Collections.max(coll)),
+        LEAST_CONFIDENT_PREDICTION(probabilities -> 1-Collections.max(probabilities)),
 
         ENTROPY(probabilities -> probabilities.stream()
                                               .filter(Double::isFinite)
@@ -461,13 +472,23 @@ public class ActiveLearningModel {
                                                          .orElseThrow(() -> new IllegalArgumentException(
                                                                  "Expecting only labeled entities for CrossValidation!"));
 
-            this.uncertaintyValue = classificationResults.stream().mapToDouble(classification -> {
-                if (classification.getMostProbableClassLabel().map(givenClassLabel::equals).orElse(false)) {
-                    return 1-classification.getClassificationProbability().orElse(1); // assume p=1 if missing, as label was correct.
-                } else {
-                    return 1;
-                }
-            }).sum() / classificationResults.size();
+            this.uncertaintyValue = classificationResults.stream() //
+                                                         .map(ClassificationResult::getClassLabelProbabilities) //
+                                                         .mapToDouble(probabilities -> {
+
+                                                             double classifierMaxProb = Collections.max(probabilities.values());
+                                                             double currentLabelProb = probabilities.getOrDefault(givenClassLabel, 0.0);
+
+                                                             double uncertaintyCurrentLabel = 1.0 - currentLabelProb;
+                                                             double certaintyOtherLabelIsBetter = classifierMaxProb - currentLabelProb;
+
+                                                             double combinedUncertainty = (uncertaintyCurrentLabel + certaintyOtherLabelIsBetter) / 2.0;
+
+                                                             return Math.sqrt(combinedUncertainty); // sqrt in [0..1] just for more intuitive values
+
+                                                         }).sum() / classificationResults.size(); // averaging over multiple results
+
+
         }
 
         @Override
