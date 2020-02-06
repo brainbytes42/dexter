@@ -1,4 +1,4 @@
-package de.panbytes.dexter.core;
+package de.panbytes.dexter.core.context;
 
 import de.panbytes.dexter.ext.task.TaskMonitor;
 import de.panbytes.dexter.plugin.DexterPlugin;

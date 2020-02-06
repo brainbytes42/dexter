@@ -1,6 +1,6 @@
 package de.panbytes.dexter.impl.csv;
 
-import de.panbytes.dexter.core.AppContext;
+import de.panbytes.dexter.core.context.AppContext;
 import de.panbytes.dexter.core.domain.DomainAdapter;
 
 class CsvDomainAdapter extends DomainAdapter {

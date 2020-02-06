@@ -1,7 +1,6 @@
 package de.panbytes.dexter.core.data;
 
 import com.google.common.base.Preconditions;
-import de.panbytes.dexter.core.ClassLabel;
 import de.panbytes.dexter.core.domain.FeatureSpace;
 import de.panbytes.dexter.lib.util.reactivex.extensions.RxField;
 import de.panbytes.dexter.lib.util.reactivex.extensions.RxFieldReadOnly;
@@ -105,6 +104,9 @@ public abstract class DataEntity extends DataNode {
      * @param classLabel the new label or null for no label.
      */
     public abstract DataEntity setClassLabel(ClassLabel classLabel);
+
+    public abstract Observable<Boolean> isInspected();
+    public abstract void setInspected(boolean inspected);
 
 
     @Override

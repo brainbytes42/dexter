@@ -1,4 +1,4 @@
-package de.panbytes.dexter.core;
+package de.panbytes.dexter.core.context;
 
 import javafx.scene.Node;
 

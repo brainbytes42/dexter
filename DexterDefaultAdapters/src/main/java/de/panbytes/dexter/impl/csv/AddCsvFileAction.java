@@ -1,7 +1,7 @@
 package de.panbytes.dexter.impl.csv;
 
-import de.panbytes.dexter.core.AppContext;
-import de.panbytes.dexter.core.DataSourceActions;
+import de.panbytes.dexter.core.context.AppContext;
+import de.panbytes.dexter.core.domain.DataSourceActions;
 import de.panbytes.dexter.core.data.DataSource;
 import de.panbytes.dexter.ext.prefs.RxPreferenceString;
 import de.panbytes.dexter.ext.task.ObservableTask;

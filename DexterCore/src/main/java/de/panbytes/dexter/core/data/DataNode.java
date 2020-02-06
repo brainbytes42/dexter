@@ -108,7 +108,7 @@ public abstract class DataNode extends Named.BaseImpl implements Named{
     }
 
     /**
-     * Set a new status if the current status is not protected ({@link Status#isProtected()}, e.g. ACTIVE or DISABLED).
+     * Set a new status if the current status is not protected ({@link Status#isProtectedState()}, e.g. ACTIVE or DISABLED).
      * @param newStatus the new status
      * @return true if the new status was set.
      * @see #setStatus(Status, boolean)
@@ -120,12 +120,12 @@ public abstract class DataNode extends Named.BaseImpl implements Named{
     /**
      * Set a new status.
      * @param newStatus the new status
-     * @param overwriteProtected if true, set status even if current status is protected ({@link Status#isProtected()}, e.g. REJECTED or INVALID).
+     * @param overwriteProtected if true, set status even if current status is protected ({@link Status#isProtectedState()}, e.g. REJECTED or INVALID).
      * @return true if the new status was set.
      */
     public boolean setStatus(Status newStatus, boolean overwriteProtected) {
         synchronized (this.status) {
-            if (!this.status.getValue().isProtected() || overwriteProtected) {
+            if (!this.status.getValue().isProtectedState() || overwriteProtected) {
                 // only set the new status if the current status is not a protected status
                 // or if the overwrite flag is set!
                 this.status.setValue(newStatus);
@@ -245,14 +245,18 @@ public abstract class DataNode extends Named.BaseImpl implements Named{
     public enum Status {
         ACTIVE(false), DISABLED(false), REJECTED(true), INVALID(true);
 
-        private final boolean isProtected;
 
-        Status(boolean isProtected) {
-            this.isProtected = isProtected;
+        private final boolean protectedState;
+
+        Status(boolean protectedState) {
+            this.protectedState = protectedState;
         }
 
-        public boolean isProtected() {
-            return isProtected;
+        /**
+         * A protected State is some kind of a non-usual Status, which should be handled with extra care
+         */
+        public boolean isProtectedState() {
+            return protectedState;
         }
     }
 }

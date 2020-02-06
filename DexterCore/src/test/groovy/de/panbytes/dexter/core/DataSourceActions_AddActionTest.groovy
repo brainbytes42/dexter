@@ -1,6 +1,7 @@
 package de.panbytes.dexter.core
 
 import de.panbytes.dexter.core.data.DataSource
+import de.panbytes.dexter.core.domain.DataSourceActions
 import de.panbytes.dexter.core.domain.DomainAdapter
 import de.panbytes.dexter.core.domain.FeatureSpace
 import spock.lang.Specification

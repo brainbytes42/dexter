@@ -1,6 +1,6 @@
 package de.panbytes.dexter.core.model.classification;
 
-import de.panbytes.dexter.core.ClassLabel;
+import de.panbytes.dexter.core.data.ClassLabel;
 import de.panbytes.dexter.core.data.DataEntity;
 import de.panbytes.dexter.core.domain.FeatureSpace;
 import de.panbytes.dexter.lib.util.reactivex.extensions.RxFieldReadOnly;

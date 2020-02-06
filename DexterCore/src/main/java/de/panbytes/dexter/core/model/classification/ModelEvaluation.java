@@ -4,7 +4,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ArrayTable;
 import com.google.common.collect.Table;
 import com.google.common.collect.Tables;
-import de.panbytes.dexter.core.ClassLabel;
+import de.panbytes.dexter.core.data.ClassLabel;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.Arrays;

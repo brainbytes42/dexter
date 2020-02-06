@@ -1,4 +1,4 @@
-package de.panbytes.dexter.core.activelearning;
+package de.panbytes.dexter.core.model.activelearning;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -9,8 +9,8 @@ import com.google.common.collect.ArrayTable;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Table;
-import de.panbytes.dexter.core.AppContext;
-import de.panbytes.dexter.core.ClassLabel;
+import de.panbytes.dexter.core.context.AppContext;
+import de.panbytes.dexter.core.data.ClassLabel;
 import de.panbytes.dexter.core.data.DataEntity;
 import de.panbytes.dexter.core.data.DomainDataEntity;
 import de.panbytes.dexter.core.domain.FeatureSpace;
@@ -97,7 +97,7 @@ public class ActiveLearningModel {
 //                                                                                                                                        .filter(entry -> !checkedEntities
 //                                                                                                                                                .contains(
 //                                                                                                                                                        entry.getKey()))
-//                                                                                                                                        .filter(entry -> entry.getKey().getClassLabel().getValue().isPresent())
+                                                                                                                                        .filter(entry -> entry.getKey().getClassLabel().getValue().isPresent())
                                                                                                                                         .map(entry -> new CrossValidationUncertainty(
                                                                                                                                                 entry.getKey(),
                                                                                                                                                 entry.getValue()))
@@ -113,7 +113,7 @@ public class ActiveLearningModel {
                                                                                         ? "No uncertain cross-validation results."
                                                                                         : "Uncertain cross-validation results: " + uncertainties))
                                                    .replay(1)
-                                                   .autoConnect();
+                                                   .refCount();
 
 
         final Observable<Map<DataEntity, ClassLabel>> suggestionsForUnlabeled = classificationModel.getClassificationResults()
@@ -185,8 +185,6 @@ public class ActiveLearningModel {
             final Map<DataEntity, ClassLabel> map = new HashMap<>();
             map.putAll(first);
             map.putAll(second);
-            checkState(first.size() + second.size() == map.size(),
-                       "Not all elements from input-maps are contained in output, sizes differ!");
             return map;
         }).distinctUntilChanged();
     }
@@ -457,7 +455,7 @@ public class ActiveLearningModel {
         }
     }
 
-    public class CrossValidationUncertainty extends AbstractUncertainty {
+    public final class CrossValidationUncertainty extends AbstractUncertainty {
 
         private final double uncertaintyValue;
         private final Collection<de.panbytes.dexter.core.model.classification.Classifier.ClassificationResult> classificationResults;

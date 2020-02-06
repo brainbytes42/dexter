@@ -5,6 +5,8 @@ import io.reactivex.functions.BiPredicate;
 
 import java.util.function.Function;
 import java.util.prefs.Preferences;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -13,6 +15,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * @param <T>
  */
 public class RxPreference<T> extends RxField<T> implements RxPreferenceReadOnly<T> {
+
+    private static final Logger log = LoggerFactory.getLogger(RxPreference.class);
 
     private final T defaultValue;
 
@@ -172,8 +176,21 @@ public class RxPreference<T> extends RxField<T> implements RxPreferenceReadOnly<
 
         @Override
         public Builder<T> withMarshalling(Function<T,String> marshaller, Function<String,T> unmarshaller) {
-            this.reader = (preferences, key, def) -> unmarshaller.apply(preferences.get(key, marshaller.apply(def)));
-            this.writer = (preferences, key, val) -> preferences.put(key, marshaller.apply(val));
+            this.reader = (preferences, key, def) -> {
+                try {
+                    return unmarshaller.apply(preferences.get(key, marshaller.apply(def)));
+                } catch (Exception e) {
+                    log.warn("Recovered from Exception in unmarshalling of preference using default value! Key was '"+key+"'; default was '"+def+"'.",e);
+                    return def;
+                }
+            };
+            this.writer = (preferences, key, val) -> {
+                try {
+                    preferences.put(key, marshaller.apply(val));
+                } catch (Exception e) {
+                    log.warn("Exception on writing preference! Key was '"+key+"'; value was '"+val+"'.",e);
+                }
+            };
             return this;
         }
 

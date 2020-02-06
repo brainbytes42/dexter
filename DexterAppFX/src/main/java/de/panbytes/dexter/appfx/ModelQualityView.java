@@ -4,9 +4,9 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.collect.ArrayTable;
 import de.panbytes.dexter.appfx.misc.WindowSizePersistence;
-import de.panbytes.dexter.core.ClassLabel;
+import de.panbytes.dexter.core.data.ClassLabel;
 import de.panbytes.dexter.core.DexterCore;
-import de.panbytes.dexter.core.activelearning.ActiveLearningModel;
+import de.panbytes.dexter.core.model.activelearning.ActiveLearningModel;
 import de.panbytes.dexter.core.model.classification.ModelEvaluation;
 import de.panbytes.dexter.util.RxJavaUtils;
 import io.reactivex.Observable;
@@ -379,15 +379,7 @@ public class ModelQualityView extends Application {
     }
 
     private void initDataSetOverviewView() {
-        this.lifecycleDisposable.add(this.dexterCore.getAppContext()
-                                                    .getSettingsRegistry()
-                                                    .getGeneralSettings()
-                                                    .getClassificationOnFilteredData()
-                                                    .toObservable()
-                                                    .switchMap(filteredOnly -> filteredOnly
-                                                                               ? this.dexterCore.getDomainAdapter()
-                                                                                                .getFilteredDomainData()
-                                                                               : this.dexterCore.getDomainAdapter().getDomainData())
+        this.lifecycleDisposable.add(this.dexterCore.getDexterModel().getClassificationModel().getInputData()
                                                     .flatMap(domainDataEntities -> RxJavaUtils.combineLatest(domainDataEntities,
                                                         entity -> entity.getClassLabel().toObservable())
                                                                                               .map(classLabelOpts -> classLabelOpts.parallelStream()

@@ -1,8 +1,7 @@
-package de.panbytes.dexter.core.model;
+package de.panbytes.dexter.core.model.visualization;
 
-import de.panbytes.dexter.core.GeneralSettings;
+import de.panbytes.dexter.core.context.GeneralSettings;
 import de.panbytes.dexter.core.data.DataEntity;
-import de.panbytes.dexter.core.data.DomainDataEntity;
 import de.panbytes.dexter.core.data.MappedDataEntity;
 import de.panbytes.dexter.core.domain.FeatureSpace;
 import de.panbytes.dexter.lib.dimension.DimensionMapping;

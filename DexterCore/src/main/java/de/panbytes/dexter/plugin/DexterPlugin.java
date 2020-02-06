@@ -1,7 +1,7 @@
 package de.panbytes.dexter.plugin;
 
 import de.panbytes.dexter.util.Named;
-import de.panbytes.dexter.core.SettingsStorage;
+import de.panbytes.dexter.core.context.SettingsStorage;
 import io.reactivex.Observable;
 import io.reactivex.subjects.BehaviorSubject;
 import io.reactivex.subjects.Subject;

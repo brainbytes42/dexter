@@ -2,9 +2,8 @@ package de.panbytes.dexter.core.domain;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import de.panbytes.dexter.core.AppContext;
-import de.panbytes.dexter.core.ClassLabel;
-import de.panbytes.dexter.core.DataSourceActions;
+import de.panbytes.dexter.core.context.AppContext;
+import de.panbytes.dexter.core.data.ClassLabel;
 import de.panbytes.dexter.core.data.DataEntity;
 import de.panbytes.dexter.core.data.DataNode;
 import de.panbytes.dexter.core.data.DataNode.EnabledState;
@@ -12,27 +11,21 @@ import de.panbytes.dexter.core.data.DataNode.Status;
 import de.panbytes.dexter.core.data.DataSource;
 import de.panbytes.dexter.core.data.DomainDataEntity;
 import de.panbytes.dexter.lib.util.reactivex.extensions.RxField;
-import de.panbytes.dexter.lib.util.reactivex.extensions.RxFieldCollection;
 import de.panbytes.dexter.lib.util.reactivex.extensions.RxFieldReadOnly;
 import de.panbytes.dexter.util.Named;
 import de.panbytes.dexter.util.RxJavaUtils;
 import io.reactivex.Observable;
 import io.reactivex.disposables.CompositeDisposable;
-import io.reactivex.functions.BiFunction;
 import io.reactivex.schedulers.Schedulers;
 import io.reactivex.subjects.BehaviorSubject;
 import io.reactivex.subjects.PublishSubject;
 import io.reactivex.subjects.Subject;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import javafx.scene.Node;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,12 +35,9 @@ public abstract class DomainAdapter extends Named.BaseImpl implements Named {
     private static final Logger log = LoggerFactory.getLogger(DomainAdapter.class);
 
     private final DataSourceActions dataSourceActions = new DataSourceActions();
-    private final RxFieldCollection<List<FilterModule>, FilterModule> filterModules = RxFieldCollection.withInitialValue(new ArrayList<>(),
-                                                                                                                         ArrayList::new);
     private final AppContext appContext;
     private final RxField<Optional<FeatureSpace>> featureSpace;
     private final Observable<Optional<DataSource>> rootDataSource;
-    @Deprecated private final Observable<List<DomainDataEntity>> filteredDomainData;
     private final Observable<List<DomainDataEntity>> domainData;
 
     private final CompositeDisposable disposable = new CompositeDisposable();
@@ -107,61 +97,6 @@ public abstract class DomainAdapter extends Named.BaseImpl implements Named {
 
         this.domainData.subscribe(entities -> System.out.println("DomainAdapter / DomainData: " + entities.size())); // TODO remove
 
-        Observable<List<FilterModule>> updatingFiltersList = this.filterModules.toObservable()
-                                                                               .observeOn(Schedulers.io())
-                                                                               .debounce(300, TimeUnit.MILLISECONDS)
-                                                                               .switchMap(filtersList -> {
-                                                                                   return filtersList.isEmpty()
-                                                                                          ? Observable.just(Collections.emptyList())
-                                                                                          : Observable.combineLatest(filtersList.stream()
-                                                                                                                                .map(filter -> filter
-                                                                                                                                        .getUpdates()
-                                                                                                                                        .startWith(
-                                                                                                                                                filter))
-                                                                                                                                .collect(
-                                                                                                                                        Collectors
-                                                                                                                                                .toList()),
-                                                                                                                     FilterObjects -> Arrays
-                                                                                                                             .stream(FilterObjects)
-                                                                                                                             .map(FilterModule.class::cast)
-                                                                                                                             .collect(
-                                                                                                                                     Collectors
-                                                                                                                                             .toList()));
-                                                                               });
-
-        BiFunction<List<DomainDataEntity>, List<FilterModule>, List<DomainDataEntity>> domainDataFilterFunction = (dataEntities, filters) -> {
-            List<DomainDataEntity> dataEntities2 = new ArrayList<>(dataEntities);
-            List<FilterModule> filters2 = new ArrayList<>(filters);
-            try {
-                final Stream<DomainDataEntity> domainDataEntityStream1 = dataEntities2.parallelStream()
-                                                                                      .filter(entity -> filters2.stream()
-                                                                                                                .filter(FilterModule::isEnabled)
-                                                                                                                .allMatch(filter -> {
-                                                                                                                    try {
-                                                                                                                        return filter.accept(
-                                                                                                                                entity);
-                                                                                                                    } catch (Exception e) {
-                                                                                                                        System.err.println(
-                                                                                                                                "EXCEPTION in FILTER: " + e);
-                                                                                                                        return false; // TODO
-                                                                                                                    }
-                                                                                                                }));
-                return domainDataEntityStream1.collect(Collectors.toList());
-            } catch (Exception e) {
-                e.printStackTrace();
-                return Collections.emptyList();
-            }
-        };
-
-        this.filteredDomainData = Observable.combineLatest(this.domainData, updatingFiltersList, domainDataFilterFunction)
-                                            .distinctUntilChanged()
-                                            .replay(1)
-                                            .autoConnect(0);
-
-        this.filteredDomainData.subscribe(
-                entities -> System.out.println("DomainAdapter / FilteredDomainData: " + entities.size())); //TODO remove
-
-
         // changed labels -> inspection history
         this.domainData.switchMap(entities -> Observable.fromIterable(entities)
                                                         .flatMap(entity -> entity.getClassLabel().toObservable().skip(1).map(__ -> entity)))
@@ -182,10 +117,6 @@ public abstract class DomainAdapter extends Named.BaseImpl implements Named {
         return this.appContext;
     }
 
-    public final RxFieldReadOnly<List<FilterModule>> getFilterModules() {
-        return this.filterModules.toReadOnlyView();
-    }
-
     public final RxFieldReadOnly<Optional<FeatureSpace>> getFeatureSpace() {
         return featureSpace.toReadOnlyView();
     }
@@ -202,18 +133,6 @@ public abstract class DomainAdapter extends Named.BaseImpl implements Named {
         return this.rootDataSource.hide();
     }
 
-    public void addDataFilter(FilterModule filter) {
-        this.filterModules.add(filter);
-    }
-
-    public void removeDataFilter(FilterModule filter) {
-        this.filterModules.remove(filter);
-    }
-
-    public void replaceDataFilter(FilterModule old, FilterModule update) {
-        this.filterModules.replace(old, update);
-    }
-
     /**
      * Return the currently active domain data (EnabledState == ACTIVE)
      *
@@ -225,19 +144,6 @@ public abstract class DomainAdapter extends Named.BaseImpl implements Named {
 
     public Observable<List<DomainDataEntity>> getDomainDataLabeled(boolean labeled) {
         return this.domainData.switchMap(entities -> filterLabeled(labeled, entities)).hide();
-    }
-
-    /**
-     * Return the domain Data (see getDataSet), but filtered by FilterModules.
-     *
-     * @return
-     */
-    public Observable<List<DomainDataEntity>> getFilteredDomainData() {
-        return this.filteredDomainData.hide();
-    }
-
-    public Observable<List<DomainDataEntity>> getFilteredDomainDataLabeled(boolean labeled) {
-        return this.filteredDomainData.switchMap(entities -> filterLabeled(labeled, entities)).hide();
     }
 
     public Observable<Set<ClassLabel>> getAllClassLabels() {
@@ -268,8 +174,8 @@ public abstract class DomainAdapter extends Named.BaseImpl implements Named {
         }).orElse(Observable.just(Collections.emptyList())));
     }
 
-    public Optional<Node> getDomainInspectionView(DataEntity inspectionTarget) {
-        return Optional.empty();
+    public Observable<Optional<Node>> getDomainInspectionView(DataEntity inspectionTarget) {
+        return Observable.just(Optional.empty());
     }
 
     @Deprecated

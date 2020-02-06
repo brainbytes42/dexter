@@ -1,9 +1,11 @@
 package de.panbytes.dexter.v2.demo;
 
 import de.panbytes.dexter.appfx.DexterApp;
-import de.panbytes.dexter.core.*;
+import de.panbytes.dexter.core.context.AppContext;
+import de.panbytes.dexter.core.data.ClassLabel;
 import de.panbytes.dexter.core.data.DataNode;
 import de.panbytes.dexter.core.data.DataSource;
+import de.panbytes.dexter.core.domain.DataSourceActions;
 import de.panbytes.dexter.core.domain.DomainAdapter;
 import de.panbytes.dexter.core.data.DomainDataEntity;
 import de.panbytes.dexter.core.domain.FeatureSpace;

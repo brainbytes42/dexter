@@ -1,6 +1,6 @@
 package de.panbytes.dexter.appfx.settings;
 
-import de.panbytes.dexter.core.GeneralSettings;
+import de.panbytes.dexter.core.context.GeneralSettings;
 import io.reactivex.rxjavafx.observables.JavaFxObservable;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;

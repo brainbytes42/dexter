@@ -1,7 +1,7 @@
 package de.panbytes.dexter.impl.csv;
 
 import com.google.common.base.Preconditions;
-import de.panbytes.dexter.core.ClassLabel;
+import de.panbytes.dexter.core.data.ClassLabel;
 import de.panbytes.dexter.core.data.DataSource;
 import de.panbytes.dexter.core.data.DomainDataEntity;
 import de.panbytes.dexter.core.domain.DomainAdapter;

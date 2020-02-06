@@ -1,4 +1,4 @@
-package de.panbytes.dexter.core;
+package de.panbytes.dexter.core.context;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 

@@ -1,11 +1,14 @@
 package de.panbytes.dexter.appfx;
 
+import com.google.common.collect.Streams;
+import com.ibm.icu.text.RuleBasedNumberFormat;
 import de.panbytes.dexter.appfx.misc.WindowSizePersistence;
-import de.panbytes.dexter.core.ClassLabel;
+import de.panbytes.dexter.appfx.scene.control.ProgressBarWithLabel;
 import de.panbytes.dexter.core.DexterCore;
-import de.panbytes.dexter.core.activelearning.ActiveLearningModel;
+import de.panbytes.dexter.core.data.ClassLabel;
 import de.panbytes.dexter.core.data.DataEntity;
 import de.panbytes.dexter.core.data.DataNode.Status;
+import de.panbytes.dexter.core.model.activelearning.ActiveLearningModel;
 import de.panbytes.dexter.core.model.classification.Classifier;
 import io.reactivex.Observable;
 import io.reactivex.disposables.CompositeDisposable;
@@ -16,9 +19,11 @@ import io.reactivex.rxjavafx.schedulers.JavaFxScheduler;
 import io.reactivex.subjects.PublishSubject;
 import io.reactivex.subjects.Subject;
 import java.io.IOException;
+import java.text.Format;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.EventObject;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TreeSet;
@@ -47,8 +52,12 @@ import javafx.scene.control.ToggleButton;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class InspectionView {
+
+    private static final Logger log = LoggerFactory.getLogger(InspectionView.class);
 
     @Deprecated
     private static final String CHECKMARK = "\u2713";
@@ -58,13 +67,15 @@ public class InspectionView {
     private final Subject<EventObject> windowClosed = PublishSubject.create();
     private final CompositeDisposable lifecycleDisposable = new CompositeDisposable();
     @FXML
+    private TextField entityStatusTextField;
+    @FXML
     private ToggleButton useSuggestedLabelButton;
     @FXML
     private ToggleButton rejectEntityButton;
     @FXML
     private ToggleButton confirmLabelButton;
     @FXML
-    private TextField uncertaintyTextField;
+    private ProgressBarWithLabel uncertaintyProgressBar;
     @FXML
     private StackedBarChart<Double, String> probabilityChart;
     @FXML
@@ -109,14 +120,17 @@ public class InspectionView {
 
             inspectionView.lifecycleDisposable.add(inspectionView.requestCloseView.subscribe(__ -> stage.close()));
 
-            WindowSizePersistence.loadAndSaveOnClose(stage,
-                InspectionView.class.getSimpleName() + "." + dexterCore.getAppContext().getSettingsRegistry().getDomainSettings().getDomainIdentifier());
+            WindowSizePersistence.loadAndSaveOnClose(stage, InspectionView.class.getSimpleName() + "." + dexterCore.getAppContext()
+                                                                                                                   .getSettingsRegistry()
+                                                                                                                   .getDomainSettings()
+                                                                                                                   .getDomainIdentifier());
 
             try {
                 stage.setScene(new Scene(fxmlLoader.load()));
                 stage.show();
+
             } catch (IOException e) {
-                e.printStackTrace();
+                log.warn("Could not load View!", e);
             }
         });
 
@@ -144,87 +158,114 @@ public class InspectionView {
 
     private void initGeneralView() {
         this.entityNameTextField.textProperty().bind(JavaFxObserver.toBinding(this.inspectionTarget.getName().toObservable()));
+
         this.entityDescriptionTextArea.textProperty().bind(JavaFxObserver.toBinding(this.inspectionTarget.getDescription().toObservable()));
+
+        this.entityStatusTextField.textProperty().bind(JavaFxObserver.toBinding(this.inspectionTarget.getStatus().map(Enum::toString)));
+        this.lifecycleDisposable.add(inspectionTarget.getStatus().map(status -> {
+            switch (status) {
+                case ACTIVE:
+                    return "ForestGreen";
+                case DISABLED:
+                    return "LightSteelBlue";
+                case REJECTED:
+                case INVALID:
+                default:
+                    return "OrangeRed";
+            }
+        }).map(color -> "-fx-text-inner-color: " + color + ";").subscribe(entityStatusTextField::setStyle));
+
         this.entityClassificationTextField.textProperty()
                                           .bind(JavaFxObserver.toBinding(Observable.combineLatest(this.inspectionTarget.getClassLabel()
                                                                                                                        .toObservable()
                                                                                                                        .map(lbl -> lbl.map(ClassLabel::toString)
                                                                                                                                       .orElse(
                                                                                                                                           MainView.EMPTY_CLASS_LABEL)),
-                                              this.dexterCore.getAppContext().getInspectionHistory().getLabeledEntities(),
-                                              (label, history) -> label + (history.contains(this.inspectionTarget) ? "  (" + CHECKMARK + ")" : ""))));
+                                                                                                  this.dexterCore.getAppContext()
+                                                                                                                 .getInspectionHistory()
+                                                                                                                 .getLabeledEntities(),
+                                                                                                  (label, history) -> label + (
+                                                                                                      history.contains(this.inspectionTarget) ? "  ("
+                                                                                                                                                + CHECKMARK
+                                                                                                                                                + ")" : ""))));
 
-        this.uncertaintyTextField.textProperty()
-                                 .bind(JavaFxObserver.toBinding(this.inspectionTarget.getClassLabel()
-                                                                                     .toObservable()
-                                                                                     .switchMap(classLabelOpt -> classLabelOpt.isPresent()
-                                                                                         ? this.dexterCore.getDexterModel()
-                                                                                                          .getActiveLearningModel()
-                                                                                                          .getExistingLabelsUncertainty()
-                                                                                                          .map(Collection::stream)
-                                                                                                          .map(stream -> stream.filter(
-                                                                                                              uncertainty -> uncertainty.getDataEntity()
-                                                                                                                                        .equals(
-                                                                                                                                            this.inspectionTarget))
-                                                                                                                               .findAny())
-                                                                                                          .map(opt -> opt.map(
-                                                                                                              ActiveLearningModel.CrossValidationUncertainty::getUncertaintyValue))
-                                                                                         : this.dexterCore.getDexterModel()
-                                                                                                          .getActiveLearningModel()
-                                                                                                          .getClassificationUncertainty()
-                                                                                                          .map(Collection::stream)
-                                                                                                          .map(stream -> stream.filter(
-                                                                                                              uncertainty -> uncertainty.getDataEntity()
-                                                                                                                                        .equals(
-                                                                                                                                            this.inspectionTarget))
-                                                                                                                               .findAny())
-                                                                                                          .map(opt -> opt.map(
-                                                                                                              ActiveLearningModel.ClassificationUncertainty::getUncertaintyValue)))
-                                                                                     .observeOn(JavaFxScheduler.platform())
-                                                                                     .map(uncertainty -> uncertainty.map(val -> val * 100)
-                                                                                                                    .map(u -> String.format("%.1f %%", u))
-                                                                                                                    .orElse("??"))));
+        this.uncertaintyProgressBar.progressProperty()
+                                   .bind(JavaFxObserver.toBinding(this.inspectionTarget.getClassLabel()
+                                                                                       .toObservable()
+                                                                                       .switchMap(classLabelOpt -> classLabelOpt.isPresent()
+                                                                                                                   ? this.dexterCore.getDexterModel()
+                                                                                                                                    .getActiveLearningModel()
+                                                                                                                                    .getExistingLabelsUncertainty()
+                                                                                                                                    .map(Collection::stream)
+                                                                                                                                    .map(
+                                                                                                                                        stream -> stream.filter(
+                                                                                                                                            uncertainty -> uncertainty
+                                                                                                                                                .getDataEntity()
+                                                                                                                                                .equals(
+                                                                                                                                                    this.inspectionTarget))
+                                                                                                                                                        .findAny())
+                                                                                                                                    .map(opt -> opt.map(
+                                                                                                                                        ActiveLearningModel.CrossValidationUncertainty::getUncertaintyValue))
+                                                                                                                   : this.dexterCore.getDexterModel()
+                                                                                                                                    .getActiveLearningModel()
+                                                                                                                                    .getClassificationUncertainty()
+                                                                                                                                    .map(Collection::stream)
+                                                                                                                                    .map(
+                                                                                                                                        stream -> stream.filter(
+                                                                                                                                            uncertainty -> uncertainty
+                                                                                                                                                .getDataEntity()
+                                                                                                                                                .equals(
+                                                                                                                                                    this.inspectionTarget))
+                                                                                                                                                        .findAny())
+                                                                                                                                    .map(opt -> opt.map(
+                                                                                                                                        ActiveLearningModel.ClassificationUncertainty::getUncertaintyValue)))
+                                                                                       .observeOn(JavaFxScheduler.platform())
+                                                                                       .map(uncertainty -> uncertainty.orElse(Double.NaN))));
 
+        Format ordinalFormat = new RuleBasedNumberFormat(Locale.UK, RuleBasedNumberFormat.ORDINAL);
         this.lifecycleDisposable.add(this.inspectionTarget.getClassLabel().toObservable().switchMap(classLabelOpt -> {
+            Platform.runLater(() -> probabilityChart.getXAxis().setLabel("Probability" + (classLabelOpt.isPresent() ? " (aggregated)" : "")));
             if (classLabelOpt.isPresent()) {
                 return this.dexterCore.getDexterModel()
                                       .getClassificationModel()
                                       .getCrossValidationResults()
                                       .map(crossValidationOpt -> crossValidationOpt.flatMap(crossValidationResult -> Optional.ofNullable(
                                           crossValidationResult.getClassificationResults().get(this.inspectionTarget)))
-                                                                                   .map(classificationResults -> classificationResults.stream()
-                                                                                                                                      .map(
-                                                                                                                                          classificationResult -> classificationResult
-                                                                                                                                              .getClassLabelProbabilities()
-                                                                                                                                              .entrySet()
-                                                                                                                                              .stream()
-                                                                                                                                              .map(
-                                                                                                                                                  entry -> new XYChart.Data<>(
-                                                                                                                                                      entry.getValue()
-                                                                                                                                                          / classificationResults
-                                                                                                                                                          .size(),
-                                                                                                                                                      (entry.getKey()
-                                                                                                                                                            .equals(
-                                                                                                                                                                classLabelOpt
-                                                                                                                                                                    .get())
-                                                                                                                                                          ?
-                                                                                                                                                          "\u2B9E"
-                                                                                                                                                              + "  "
-                                                                                                                                                          // arrow current label
-                                                                                                                                                          : "")
-                                                                                                                                                          + entry
-                                                                                                                                                          .getKey()
-                                                                                                                                                          .getLabel()))
-                                                                                                                                              .collect(
-                                                                                                                                                  Collectors.toCollection(
-                                                                                                                                                      FXCollections::observableArrayList)))
-                                                                                                                                      .map(
-                                                                                                                                          chartData -> new XYChart.Series<>(
-                                                                                                                                              "Validation-Run",
-                                                                                                                                              chartData))
-                                                                                                                                      .collect(
-                                                                                                                                          Collectors.toCollection(
-                                                                                                                                              FXCollections::observableArrayList))));
+                                                                                   .map(classificationResults -> Streams.mapWithIndex(
+                                                                                       classificationResults.stream()
+                                                                                                            .map(
+                                                                                                                classificationResult -> classificationResult.getClassLabelProbabilities()
+                                                                                                                                                            .entrySet()
+                                                                                                                                                            .stream()
+                                                                                                                                                            .map(
+                                                                                                                                                                entry -> new XYChart.Data<>(
+                                                                                                                                                                    entry
+                                                                                                                                                                        .getValue()
+                                                                                                                                                                    / classificationResults
+                                                                                                                                                                        .size(),
+                                                                                                                                                                    (entry
+                                                                                                                                                                         .getKey()
+                                                                                                                                                                         .equals(
+                                                                                                                                                                             classLabelOpt
+                                                                                                                                                                                 .get())
+                                                                                                                                                                     ?
+                                                                                                                                                                     "\u2B9E"
+                                                                                                                                                                     + "  "
+                                                                                                                                                                     // arrow current label
+                                                                                                                                                                     : "")
+                                                                                                                                                                    + entry
+                                                                                                                                                                        .getKey()
+                                                                                                                                                                        .getLabel()))
+                                                                                                                                                            .collect(
+                                                                                                                                                                Collectors
+                                                                                                                                                                    .toCollection(
+                                                                                                                                                                        FXCollections::observableArrayList))),
+                                                                                       (chartData, index) -> new XYChart.Series<>("Cross-Validation ("
+                                                                                                                                  + ordinalFormat.format(
+                                                                                           index + 1)
+                                                                                                                                  + " iteration)", chartData))
+                                                                                                                        .collect(Collectors.toCollection(
+                                                                                                                            FXCollections::observableArrayList))));
             } else {
                 return this.dexterCore.getDexterModel()
                                       .getClassificationModel()
@@ -255,14 +296,14 @@ public class InspectionView {
                                                                   .map(XYChart.Series::getData)
                                                                   .flatMap(Collection::stream)
                                                                   .collect(Collectors.groupingBy(XYChart.Data::getYValue,
-                                                                      Collectors.summingDouble(XYChart.Data::getXValue)));
+                                                                                                 Collectors.summingDouble(XYChart.Data::getXValue)));
 
             ((CategoryAxis) this.probabilityChart.getYAxis()).setCategories(sums.entrySet()
                                                                                 .stream()
                                                                                 .sorted(Comparator.comparing(Map.Entry::getValue))
                                                                                 .map(Map.Entry::getKey)
                                                                                 .collect(Collectors.collectingAndThen(Collectors.toList(),
-                                                                                    FXCollections::observableList)));
+                                                                                                                      FXCollections::observableList)));
 
             this.probabilityChart.getYAxis().setAutoRanging(true); // otherwise labels aren't changed by sorting, but only bars!
 
@@ -274,12 +315,19 @@ public class InspectionView {
     }
 
     private void initDomainView() {
-        this.domainInspectionDisplayContainer.setContent(this.dexterCore.getDomainAdapter().getDomainInspectionView(this.inspectionTarget).orElseGet(() -> {
-            Label missingInspectionViewLabel = new Label("<No Inspection View available!>");
-            missingInspectionViewLabel.setStyle("-fx-background-color: #ffff99;");
-            missingInspectionViewLabel.setPadding(new Insets(150.0));
-            return missingInspectionViewLabel;
-        }));
+        Disposable disposable = this.dexterCore.getDomainAdapter()
+                                               .getDomainInspectionView(this.inspectionTarget)
+                                               .defaultIfEmpty(Optional.empty())
+                                               .map(viewOpt -> viewOpt.orElseGet(() -> {
+                                                   Label missingInspectionViewLabel = new Label("<No Inspection View available!>");
+                                                   missingInspectionViewLabel.setStyle("-fx-background-color: #ffff99;");
+                                                   missingInspectionViewLabel.setPadding(new Insets(150.0));
+                                                   return missingInspectionViewLabel;
+                                               }))
+                                               .observeOn(JavaFxScheduler.platform())
+                                               .subscribe(domainInspectionDisplayContainer::setContent);
+        this.lifecycleDisposable.add(disposable);
+
     }
 
     private void initMainButtons() {
@@ -311,7 +359,7 @@ public class InspectionView {
         this.lifecycleDisposable.add(disposable);
 
         disposable = Observable.merge(JavaFxObservable.actionEventsOf(this.enterNewLabelCustomMenuItemTextField),
-            JavaFxObservable.actionEventsOf(this.enterNewLabelCustomMenuItemOkButton))
+                                      JavaFxObservable.actionEventsOf(this.enterNewLabelCustomMenuItemOkButton))
                                .map(__ -> this.enterNewLabelCustomMenuItemTextField.getText())
                                .doOnNext(__ -> this.enterNewLabelCustomMenuItemTextField.clear())
                                .doOnNext(__ -> this.labelAsMenuButton.hide())
@@ -345,13 +393,14 @@ public class InspectionView {
         // Button: Use / change to suggested Label
         //
         disposable = Observable.combineLatest(classLabelObs, suggestionObs, //
-            (label, suggestion) -> label.map(__ -> "Change to").orElse("Use") + " suggested Label" + suggestion.map(s -> " [" + s + "]").orElse(""))
+                                              (label, suggestion) -> label.map(__ -> "Change to").orElse("Use") + " suggested Label" + suggestion.map(
+                                                  s -> " [" + s + "]").orElse(""))
                                .observeOn(JavaFxScheduler.platform())
                                .subscribe(text -> this.useSuggestedLabelButton.setText(text));
         this.lifecycleDisposable.add(disposable);
 
         disposable = Observable.combineLatest(classLabelObs, suggestionObs, //
-            (label, suggestion) -> !suggestion.isPresent() || suggestion.equals(label))
+                                              (label, suggestion) -> !suggestion.isPresent() || suggestion.equals(label))
                                .observeOn(JavaFxScheduler.platform())
                                .subscribe(disable -> this.useSuggestedLabelButton.setDisable(disable));
         this.lifecycleDisposable.add(disposable);
@@ -372,7 +421,7 @@ public class InspectionView {
         // Button: REJECT
         //
         disposable = this.inspectionTarget.getStatus()
-                                          .map(Status::isProtected)
+                                          .map(Status::isProtectedState)
                                           .observeOn(JavaFxScheduler.platform())
                                           .subscribe(this.rejectEntityButton::setDisable);
         this.lifecycleDisposable.add(disposable);
@@ -391,7 +440,6 @@ public class InspectionView {
         //
         disposable = JavaFxObservable.actionEventsOf(this.closeInspectionButton).subscribe(this.requestCloseView::onNext);
         this.lifecycleDisposable.add(disposable);
-
 
     }
 

@@ -2,6 +2,7 @@ package de.panbytes.dexter.core;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import de.panbytes.dexter.core.context.AppContext;
 import de.panbytes.dexter.core.domain.DomainAdapter;
 import de.panbytes.dexter.core.model.DexterModel;
 import de.panbytes.dexter.plugin.DataExportPlugin;
@@ -45,7 +46,7 @@ public class DexterCore {
 
         // register export plugin
         // TODO: is this the best place to add plugins?
-        appContext.getPluginRegistry().add(new DataExportPlugin(this.domainAdapter));
+        appContext.getPluginRegistry().add(new DataExportPlugin(this.domainAdapter, this.dexterModel));
 
     }
 

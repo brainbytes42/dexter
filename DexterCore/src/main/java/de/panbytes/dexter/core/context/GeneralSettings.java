@@ -1,9 +1,8 @@
-package de.panbytes.dexter.core;
+package de.panbytes.dexter.core.context;
 
 import de.panbytes.dexter.ext.prefs.RxPreference;
 import de.panbytes.dexter.ext.prefs.RxPreferenceBoolean;
 import de.panbytes.dexter.ext.prefs.RxPreferenceDouble;
-import java.util.prefs.Preferences;
 import javafx.scene.Node;
 
 import java.util.Optional;

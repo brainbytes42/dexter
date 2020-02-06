@@ -11,21 +11,18 @@ import com.google.common.base.Predicates;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.Comparators;
 import com.google.common.collect.HashBiMap;
-import com.google.common.collect.Table;
 import de.panbytes.dexter.appfx.scene.chart.InteractiveScatterChart;
 import de.panbytes.dexter.appfx.settings.SettingsView;
-import de.panbytes.dexter.core.AppContext;
-import de.panbytes.dexter.core.ClassLabel;
-import de.panbytes.dexter.core.DataSourceActions;
+import de.panbytes.dexter.core.context.AppContext;
+import de.panbytes.dexter.core.data.ClassLabel;
+import de.panbytes.dexter.core.domain.DataSourceActions;
 import de.panbytes.dexter.core.DexterCore;
-import de.panbytes.dexter.core.activelearning.ActiveLearningModel;
-import de.panbytes.dexter.core.activelearning.ActiveLearningModel.AbstractUncertainty;
-import de.panbytes.dexter.core.activelearning.ActiveLearningModel.CrossValidationUncertainty;
+import de.panbytes.dexter.core.model.activelearning.ActiveLearningModel;
+import de.panbytes.dexter.core.model.activelearning.ActiveLearningModel.AbstractUncertainty;
+import de.panbytes.dexter.core.model.activelearning.ActiveLearningModel.CrossValidationUncertainty;
 import de.panbytes.dexter.core.data.DataEntity;
 import de.panbytes.dexter.core.data.DataSource;
-import de.panbytes.dexter.core.data.DomainDataEntity;
 import de.panbytes.dexter.core.domain.DomainAdapter;
-import de.panbytes.dexter.core.domain.FeatureSpace;
 import de.panbytes.dexter.core.model.DexterModel;
 import de.panbytes.dexter.core.model.FilterManager.FilterModule;
 import de.panbytes.dexter.core.model.classification.ModelEvaluation;
@@ -97,8 +94,6 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import weka.classifiers.Evaluation;
-import weka.classifiers.trees.RandomForest;
 
 /**
  * The Controller for the Main View, coupled with JavaFX's FXML-Layout.
@@ -373,56 +368,7 @@ public class MainView {
 
     }
 
-    @FXML
-    @Deprecated
-    public void checkLabel(ActionEvent actionEvent) {
-        this.domainAdapter.getFilteredDomainData().firstElement().subscribe(entities -> {
 
-            List<DomainDataEntity> labeledNotYetCheckedEntities = new ArrayList<>(entities);
-            labeledNotYetCheckedEntities.removeIf(entity -> !entity.getClassLabel().getValue().isPresent());
-            labeledNotYetCheckedEntities.removeAll(this.appContext.getInspectionHistory().getLabeledEntities().blockingFirst());
-
-            System.out.println("LabeledNotChecked: " + labeledNotYetCheckedEntities.size());
-
-            if (!labeledNotYetCheckedEntities.isEmpty()) {
-
-                FeatureSpace featureSpace = this.domainAdapter.getFeatureSpace()
-                                                              .getValue()
-                                                              .orElseThrow(() -> new IllegalStateException("Expect FeatureSpace to be available!"));
-
-                ActiveLearningModel activeLearningModel = new ActiveLearningModel(RandomForest::new, this.domainAdapter.getClassLabels().blockingFirst());
-                Evaluation evaluation = activeLearningModel.evaluateClassification(featureSpace, labeledNotYetCheckedEntities);
-
-                System.out.println(evaluation.toSummaryString());
-                System.out.println("----------------------------");
-                System.out.println(evaluation.toMatrixString());
-                System.out.println("----------------------------");
-
-                Table<DomainDataEntity, ClassLabel, Double> probabilities = activeLearningModel.classificationProbabilities(featureSpace,
-                    labeledNotYetCheckedEntities, labeledNotYetCheckedEntities, appContext.getTaskMonitor());
-
-                //            System.out.println(probabilities);
-
-                List<Map.Entry<DomainDataEntity, Map<ClassLabel, Double>>> probabilitiesSortedByDoubt = probabilities.rowMap()
-                                                                                                                     .entrySet()
-                                                                                                                     .stream()
-                                                                                                                     .sorted(Comparator.comparing(entry -> entry
-                                                                                                                         .getKey()
-                                                                                                                         .getClassLabel()
-                                                                                                                         .getValue()
-                                                                                                                         .map(lbl -> entry.getValue().get(lbl))
-                                                                                                                         .orElse(0.)))
-                                                                                                                     .collect(Collectors.toList());
-                probabilitiesSortedByDoubt.forEach(entry -> System.out.printf("Entry (is %s): %s  -->  %f %n", entry.getKey().getClassLabel().getValue(), entry,
-                    entry.getKey().getClassLabel().getValue().map(lbl -> entry.getValue().get(lbl)).orElse(0.)));
-
-                probabilitiesSortedByDoubt.stream().findFirst().ifPresent(entry -> {
-                    InspectionView.createAndShow(this.dexterCore, entry.getKey());
-                });
-
-            }
-        });
-    }
 
     private void createTreeItemsForDataSources(DataSource currentDataSource, TreeItem<DataSource> currentTreeItem,
         BiMap<DataSource, TreeItem<DataSource>> dataSourceTreeItemMap) {

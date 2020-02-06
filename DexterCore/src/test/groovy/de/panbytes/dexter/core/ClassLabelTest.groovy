@@ -1,6 +1,6 @@
 package de.panbytes.dexter.core
 
-import de.panbytes.dexter.core.ClassLabel
+import de.panbytes.dexter.core.data.ClassLabel
 import spock.lang.Specification
 
 import java.lang.reflect.Modifier

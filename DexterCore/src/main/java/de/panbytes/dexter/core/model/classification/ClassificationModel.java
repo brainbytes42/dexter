@@ -2,7 +2,7 @@ package de.panbytes.dexter.core.model.classification;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import de.panbytes.dexter.core.AppContext;
+import de.panbytes.dexter.core.context.AppContext;
 import de.panbytes.dexter.core.data.DataEntity;
 import de.panbytes.dexter.util.RxJavaUtils;
 import io.reactivex.Observable;
@@ -29,10 +29,11 @@ public class ClassificationModel {
     private final AppContext appContext;
     private final Observable<Optional<Map<DataEntity, Classifier.ClassificationResult>>> classificationResults;
     private final Observable<Optional<CrossValidation.CrossValidationResult>> crossValidationResults;
+    private final Observable<? extends Collection<? extends DataEntity>> inputData;
 
     public ClassificationModel(Observable<? extends Collection<? extends DataEntity>> inputData, AppContext appContext) {
 
-        checkNotNull(inputData, "InputData may not be null!");
+        this.inputData = checkNotNull(inputData, "InputData may not be null!");
 
         // store the context-reference
         this.appContext = checkNotNull(appContext, "AppContext may not be null!");
@@ -164,4 +165,7 @@ public class ClassificationModel {
 
     }
 
+    public Observable<? extends Collection<? extends DataEntity>> getInputData() {
+        return inputData;
+    }
 }

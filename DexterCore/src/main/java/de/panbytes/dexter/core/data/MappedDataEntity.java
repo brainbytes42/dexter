@@ -1,9 +1,9 @@
 package de.panbytes.dexter.core.data;
 
-import de.panbytes.dexter.core.ClassLabel;
 import de.panbytes.dexter.core.domain.FeatureSpace;
 import de.panbytes.dexter.lib.util.reactivex.extensions.RxFieldReadOnly;
 
+import io.reactivex.Observable;
 import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -60,6 +60,16 @@ public final class MappedDataEntity extends DataEntity {
     public DataEntity setClassLabel(ClassLabel classLabel) {
         mappedDataEntity.setClassLabel(classLabel);
         return this;
+    }
+
+    @Override
+    public Observable<Boolean> isInspected() {
+        return mappedDataEntity.isInspected();
+    }
+
+    @Override
+    public void setInspected(boolean inspected) {
+        mappedDataEntity.setInspected(inspected);
     }
 
     /**

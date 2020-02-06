@@ -1,10 +1,11 @@
 package de.panbytes.dexter.plugin;
 
-import de.panbytes.dexter.core.ClassLabel;
+import de.panbytes.dexter.core.data.ClassLabel;
 import de.panbytes.dexter.core.data.DataSource;
 import de.panbytes.dexter.core.data.DomainDataEntity;
 import de.panbytes.dexter.core.domain.DomainAdapter;
 import de.panbytes.dexter.core.domain.FeatureSpace;
+import de.panbytes.dexter.core.model.DexterModel;
 import de.panbytes.dexter.lib.util.reactivex.extensions.RxFieldReadOnly;
 import io.reactivex.Observable;
 import io.reactivex.schedulers.Schedulers;
@@ -32,10 +33,10 @@ public class DataExportPlugin extends DexterPlugin {
     private final String CSV_DELIMITER = ";";
     private final NumberFormat CSV_NUMBER_FORMAT = new DecimalFormat("0.##########E0");
 
-    public DataExportPlugin(DomainAdapter domainAdapter) {
+    public DataExportPlugin(DomainAdapter domainAdapter, DexterModel dexterModel) {
         super("Export data set", "Write (filtered) domain data to File.");
 
-        setActions(Arrays.asList(new WriteCsvAction(domainAdapter, true), new WriteCsvAction(domainAdapter, false)));
+        setActions(Arrays.asList(new WriteCsvAction(domainAdapter, dexterModel, true), new WriteCsvAction(domainAdapter, dexterModel, false)));
 
     }
 
@@ -43,12 +44,14 @@ public class DataExportPlugin extends DexterPlugin {
     public class WriteCsvAction extends Action {
 
         private final DomainAdapter domainAdapter;
+        private final DexterModel dexterModel;
         private final boolean filteredDataOnly;
 
-        private WriteCsvAction(DomainAdapter domainAdapter, boolean filteredDataOnly) {
+        private WriteCsvAction(DomainAdapter domainAdapter, DexterModel dexterModel, boolean filteredDataOnly) {
             super("Write CSV " + (filteredDataOnly ? "(filtered data)" : "(full data)"),
                   "Write " + (filteredDataOnly ? "filtered" : "unfiltered") + " Data as CSV.");
             this.domainAdapter = domainAdapter;
+            this.dexterModel = dexterModel;
             this.filteredDataOnly = filteredDataOnly;
         }
 
@@ -95,7 +98,7 @@ public class DataExportPlugin extends DexterPlugin {
 
                                          // LINES (filtered or not filtered)
                                          (this.filteredDataOnly
-                                          ? this.domainAdapter.getFilteredDomainData()
+                                          ? this.dexterModel.getFilteredDomainData()
                                           : this.domainAdapter.getRootDataSource()
                                                               .switchMap(
                                                                       dataSourceOpt -> dataSourceOpt.map(DataSource::getSubtreeDataEntities)

@@ -2,22 +2,20 @@ package de.panbytes.dexter.core.model;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import de.panbytes.dexter.core.AppContext;
-import de.panbytes.dexter.core.GeneralSettings;
-import de.panbytes.dexter.core.activelearning.ActiveLearningModel;
+import de.panbytes.dexter.core.context.AppContext;
+import de.panbytes.dexter.core.context.GeneralSettings;
+import de.panbytes.dexter.core.model.activelearning.ActiveLearningModel;
 import de.panbytes.dexter.core.data.DataEntity;
 import de.panbytes.dexter.core.data.DomainDataEntity;
-import de.panbytes.dexter.core.data.MappedDataEntity;
 import de.panbytes.dexter.core.domain.DomainAdapter;
-import de.panbytes.dexter.core.model.FilterManager.FilterModule;
 import de.panbytes.dexter.core.model.classification.ClassificationModel;
+import de.panbytes.dexter.core.model.visualization.VisualizationModel;
 import de.panbytes.dexter.lib.util.reactivex.extensions.RxField;
 import de.panbytes.dexter.lib.util.reactivex.extensions.RxFieldReadOnly;
 import io.reactivex.Observable;
 import io.reactivex.subjects.BehaviorSubject;
 import io.reactivex.subjects.Subject;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
@@ -37,6 +35,12 @@ public class DexterModel {
 
     private final FilterManager<DomainDataEntity> filterManager;
 
+    public Observable<List<DomainDataEntity>> getFilteredDomainData() {
+        return filteredDomainData;
+    }
+
+    private final Observable<List<DomainDataEntity>> filteredDomainData;
+
     public DexterModel(DomainAdapter domainAdapter, AppContext appContext) {
 
         checkNotNull(domainAdapter, "DomainAdapter may not be null!");
@@ -46,7 +50,7 @@ public class DexterModel {
 
         // TODO work in progress
         this.filterManager = new FilterManager<>(domainAdapter.getDomainData());
-        Observable<List<DomainDataEntity>> filteredDomainData = this.filterManager.getOutput().debounce(10, TimeUnit.MILLISECONDS);
+        filteredDomainData = this.filterManager.getOutput().debounce(10, TimeUnit.MILLISECONDS);
         filteredDomainData.subscribe(filterResults -> log.debug("FilterResults: " + filterResults));
 
 //        this.visualizationModel = new VisualizationModel(domainAdapter.getFilteredDomainData(), settings, getDimReductionEnabled());
@@ -61,15 +65,17 @@ public class DexterModel {
         this.activeLearningModel = new ActiveLearningModel(this.classificationModel, appContext);
     }
 
-    @Deprecated
+    @Deprecated // TODO: pause cpu-intensive models by disposing (or switch-mapping)...?
     public Subject<Boolean> getDimReductionEnabled() {
         return dimReductionEnabled;
     }
 
+    @Deprecated // TODO: multiple simultaneous inspections...?! => open inspection views...?
     public RxFieldReadOnly<Optional<DataEntity>> getCurrentInspectionEntity() {
         return this.currentInspectionEntity.toReadOnlyView();
     }
 
+    @Deprecated // TODO: multiple simultaneous inspections...?! => open inspection views...?
     public void setCurrentInspectionEntity(DataEntity inspectionEntity) {
         this.currentInspectionEntity.setValue(Optional.ofNullable(inspectionEntity));
     }

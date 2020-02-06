@@ -1,9 +1,9 @@
 package de.panbytes.dexter.core.data;
 
-import de.panbytes.dexter.core.ClassLabel;
 import de.panbytes.dexter.core.domain.FeatureSpace;
 import de.panbytes.dexter.lib.util.reactivex.extensions.RxField;
 import de.panbytes.dexter.lib.util.reactivex.extensions.RxFieldReadOnly;
+import io.reactivex.Observable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -11,11 +11,12 @@ import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-public final class DomainDataEntity extends DataEntity {
+public class DomainDataEntity extends DataEntity {
 
     private static final Logger log = LoggerFactory.getLogger(DomainDataEntity.class);
 
     private final RxField<Optional<ClassLabel>> classLabel = RxField.initiallyEmpty();
+    private final RxField<Boolean> inspected = RxField.withInitialValue(false);
     private DataSource generatingDataSource = null;
 
     /**
@@ -41,7 +42,7 @@ public final class DomainDataEntity extends DataEntity {
 //    public Optional<DataSource> getGeneratingDataSource() {
 //        return Optional.ofNullable(this.generatingDataSource);
 //    }
-    public DataSource getGeneratingDataSource() {
+    public final DataSource getGeneratingDataSource() {
         return this.generatingDataSource;
     }
 
@@ -64,7 +65,7 @@ public final class DomainDataEntity extends DataEntity {
      * @return the class label, if available.
      */
     @Override
-    public RxFieldReadOnly<Optional<ClassLabel>> getClassLabel() {
+    public final RxFieldReadOnly<Optional<ClassLabel>> getClassLabel() {
         return this.classLabel.toReadOnlyView();
     }
 
@@ -74,8 +75,19 @@ public final class DomainDataEntity extends DataEntity {
      * @param classLabel the new label or null for no label.
      */
     @Override
-    public DataEntity setClassLabel(ClassLabel classLabel) {
+    public final DataEntity setClassLabel(ClassLabel classLabel) {
         this.classLabel.setValue(Optional.ofNullable(classLabel));
         return this;
     }
+
+    @Override
+    public final Observable<Boolean> isInspected() {
+        return inspected.toObservable();
+    }
+
+    @Override
+    public final void setInspected(boolean inspected) {
+        this.inspected.setValue(inspected);
+    }
+
 }

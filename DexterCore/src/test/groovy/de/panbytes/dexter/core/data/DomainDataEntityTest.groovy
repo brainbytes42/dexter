@@ -1,8 +1,6 @@
 package de.panbytes.dexter.core.data
 
-import de.panbytes.dexter.core.ClassLabel
-import de.panbytes.dexter.core.data.DataSource
-import de.panbytes.dexter.core.data.DomainDataEntity
+
 import de.panbytes.dexter.core.domain.FeatureSpace
 import spock.lang.Shared
 import spock.lang.Specification

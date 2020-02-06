@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import de.panbytes.dexter.appfx.scene.control.ProgressBarWithLabel?>
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.chart.CategoryAxis?>
 <?import javafx.scene.chart.NumberAxis?>
@@ -28,7 +29,7 @@
   <bottom>
     <ButtonBar fx:id="mainButtons" BorderPane.alignment="CENTER">
       <buttons>
-        <MenuButton fx:id="labelAsMenuButton" mnemonicParsing="false" text="Label as..." ButtonBar.buttonData="OK_DONE">
+        <MenuButton fx:id="labelAsMenuButton" mnemonicParsing="false" text="Label as..." ButtonBar.buttonData="NO">
           <items>
             <MenuItem mnemonicParsing="false" text="&lt;Label A&gt;" />
             <MenuItem mnemonicParsing="false" text="&lt;Label B&gt;" />
@@ -57,7 +58,7 @@
         </MenuButton>
         <SegmentedButton ButtonBar.buttonData="OK_DONE" ButtonBar.buttonUniformSize="false">
           <buttons>
-            <ToggleButton fx:id="confirmLabelButton" mnemonicParsing="false" text="Confirm current Label"  />
+            <ToggleButton fx:id="confirmLabelButton" mnemonicParsing="false" text="Confirm current Label" />
             <ToggleButton fx:id="useSuggestedLabelButton" mnemonicParsing="false" text="Use suggested Label" />
             <ToggleButton fx:id="rejectEntityButton" mnemonicParsing="false" text="Reject Entity" />
           </buttons>
@@ -88,19 +89,25 @@
             <RowConstraints minHeight="25.0" vgrow="SOMETIMES" />
             <RowConstraints minHeight="25.0" />
             <RowConstraints maxHeight="300" minHeight="100.0" prefHeight="100.0" vgrow="SOMETIMES" />
+            <RowConstraints prefHeight="10.0" />
+            <RowConstraints minHeight="25.0" />
           </rowConstraints>
           <children>
-            <Label text="Name:" />
+            <Label text="Name:" GridPane.rowIndex="0" />
+            <TextField fx:id="entityNameTextField" editable="false" GridPane.columnIndex="1" GridPane.rowIndex="0" />
             <Label text="Description:" GridPane.rowIndex="1" />
-            <Label text="Classification:" GridPane.rowIndex="2" />
-            <TextField fx:id="entityNameTextField" editable="false" GridPane.columnIndex="1" />
             <TextArea fx:id="entityDescriptionTextArea" editable="false" prefHeight="100.0" prefWidth="200.0" wrapText="true" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+            <Label text="Classification:" GridPane.rowIndex="2" />
             <TextField fx:id="entityClassificationTextField" editable="false" GridPane.columnIndex="1" GridPane.rowIndex="2" />
-            <ScrollPane fitToWidth="true" GridPane.columnSpan="2147483647" GridPane.rowIndex="6" GridPane.rowSpan="2147483647">
+            <Label text="Uncertainty:" GridPane.rowIndex="3" />
+            <ProgressBarWithLabel fx:id="uncertaintyProgressBar" progress="NaN" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+            <Label text="Classification Probabilities:" GridPane.columnSpan="2147483647" GridPane.rowIndex="5" />
+            <ScrollPane fitToWidth="true" GridPane.columnSpan="2147483647" GridPane.rowIndex="6">
               <content>
-                <StackedBarChart fx:id="probabilityChart" categoryGap="5.0" legendVisible="false" prefHeight="150.0" prefWidth="150.0" titleSide="BOTTOM">
+                <!-- StackedBarChart: animated false => proper layout of changed data after showing! -->
+                <StackedBarChart fx:id="probabilityChart" animated="false" categoryGap="5.0" prefHeight="150.0" prefWidth="150.0">
                   <xAxis>
-                    <NumberAxis autoRanging="false" label="(avg.) Probability (one color per run)" minorTickCount="4" side="BOTTOM" tickUnit="0.2" upperBound="1.0">
+                    <NumberAxis autoRanging="false" label="Probability (aggregated)" minorTickCount="4" side="BOTTOM" tickUnit="0.2" upperBound="1.0">
                       <tickLabelFormatter><PercentageStringConverter /></tickLabelFormatter>
                     </NumberAxis>
                   </xAxis>
@@ -110,16 +117,15 @@
                 </StackedBarChart>
               </content>
             </ScrollPane>
-            <Label text="Classification Probabilities:" GridPane.columnSpan="2147483647" GridPane.rowIndex="5" />
-            <Label layoutX="20.0" layoutY="235.0" text="Uncertainty:" GridPane.rowIndex="3" />
-            <TextField fx:id="uncertaintyTextField" editable="false" layoutX="120.0" layoutY="231.0" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+            <Label text="Status (Model):" GridPane.rowIndex="8" />
+            <TextField fx:id="entityStatusTextField" alignment="CENTER" editable="false" GridPane.columnIndex="1" GridPane.rowIndex="8" />
           </children>
         </GridPane>
       </content>
     </TitledPane>
   </right>
   <center>
-    <TitledPane fx:id="domainInspectionDisplayContainer" collapsible="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" text="Domain" BorderPane.alignment="CENTER">
+    <TitledPane fx:id="domainInspectionDisplayContainer" collapsible="false" focusTraversable="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" text="Domain" BorderPane.alignment="CENTER">
       <content>
         <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0" />
       </content>

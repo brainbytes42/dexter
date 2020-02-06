@@ -7,10 +7,10 @@ import static com.google.common.base.Verify.verify;
 
 import de.panbytes.dexter.appfx.misc.WindowSizePersistence;
 import de.panbytes.dexter.appfx.settings.DexterGeneralSettingsView;
-import de.panbytes.dexter.core.AppContext;
+import de.panbytes.dexter.core.context.AppContext;
 import de.panbytes.dexter.core.DexterCore;
-import de.panbytes.dexter.core.DomainSettings;
-import de.panbytes.dexter.core.GeneralSettings;
+import de.panbytes.dexter.core.context.DomainSettings;
+import de.panbytes.dexter.core.context.GeneralSettings;
 import de.panbytes.dexter.core.domain.DomainAdapter;
 import io.reactivex.rxjavafx.observers.JavaFxObserver;
 import io.reactivex.rxjavafx.schedulers.JavaFxScheduler;

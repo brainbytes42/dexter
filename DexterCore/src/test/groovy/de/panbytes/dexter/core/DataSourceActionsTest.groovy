@@ -1,6 +1,6 @@
 package de.panbytes.dexter.core
 
-import de.panbytes.dexter.core.DataSourceActions
+import de.panbytes.dexter.core.domain.DataSourceActions
 import spock.lang.Ignore
 import spock.lang.Specification
 import spock.lang.Timeout

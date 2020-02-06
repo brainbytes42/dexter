@@ -1,9 +1,7 @@
-package de.panbytes.dexter.core;
+package de.panbytes.dexter.core.domain;
 
 import com.google.common.base.Preconditions;
 import de.panbytes.dexter.core.data.DataSource;
-import de.panbytes.dexter.core.domain.DomainAdapter;
-import de.panbytes.dexter.core.domain.FeatureSpace;
 import de.panbytes.dexter.util.Named;
 import io.reactivex.Observable;
 import io.reactivex.subjects.BehaviorSubject;
