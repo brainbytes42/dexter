@@ -72,6 +72,11 @@ public final class MappedDataEntity extends DataEntity {
         mappedDataEntity.setInspected(inspected);
     }
 
+    @Override
+    public DataSource getGeneratingDataSource() {
+        return getMappedDataEntity().getGeneratingDataSource();
+    }
+
     /**
      * Set new coordinates for the entity.
      *

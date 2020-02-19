@@ -6,6 +6,7 @@ import de.panbytes.dexter.core.context.AppContext;
 import de.panbytes.dexter.core.domain.DomainAdapter;
 import de.panbytes.dexter.core.model.DexterModel;
 import de.panbytes.dexter.plugin.DataExportPlugin;
+import de.panbytes.dexter.plugin.ModelExportPlugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.bridge.SLF4JBridgeHandler;
@@ -47,6 +48,7 @@ public class DexterCore {
         // register export plugin
         // TODO: is this the best place to add plugins?
         appContext.getPluginRegistry().add(new DataExportPlugin(this.domainAdapter, this.dexterModel));
+        appContext.getPluginRegistry().add(new ModelExportPlugin(this.domainAdapter, this.dexterModel));
 
     }
 

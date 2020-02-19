@@ -28,6 +28,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -116,6 +117,7 @@ public class ActiveLearningModel {
                                                    .refCount();
 
 
+        // TODO: see ModelExportPlugin#writeModelToCsv for simpler solution!
         final Observable<Map<DataEntity, ClassLabel>> suggestionsForUnlabeled = classificationModel.getClassificationResults()
                                                                                                    .map(optional -> optional.map(
                                                                                                            resultMap -> resultMap.entrySet()
@@ -135,6 +137,8 @@ public class ActiveLearningModel {
                                                                                                                                                                                 "Filtered for present Optional, but found non-present!")))))
                                                                                                                             .orElse(Collections
                                                                                                                                             .emptyMap()));
+
+        // TODO: see ModelExportPlugin#writeModelToCsv for simpler solution!
         final Observable<Map<DataEntity, ClassLabel>> suggestionsForLabeled = classificationModel.getCrossValidationResults()
                                                                                                  .map(crossValidation -> crossValidation.map(
                                                                                                          CrossValidationResult::getClassificationResults)
@@ -498,6 +502,15 @@ public class ActiveLearningModel {
                                                          }).sum() / classificationResults.size(); // averaging over multiple results
 
 
+
+        }
+
+        public Map<ClassLabel, Double> getAveragedClassificationResults(){
+            return classificationResults.stream()
+                                 .map(ClassificationResult::getClassLabelProbabilities)
+                                 .map(Map::entrySet)
+                                 .flatMap(Collection::stream)
+                                 .collect(Collectors.groupingBy(Entry::getKey, Collectors.averagingDouble(Entry::getValue)));
         }
 
         @Override
@@ -524,5 +537,6 @@ public class ActiveLearningModel {
         }
 
         public abstract double getUncertaintyValue();
+
     }
 }

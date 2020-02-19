@@ -109,6 +109,13 @@ public abstract class DataEntity extends DataNode {
     public abstract void setInspected(boolean inspected);
 
 
+    /**
+     * Get the {@link DataSource} that created this entity.
+     *
+     * @return the generating DataSource.
+     */
+    public abstract DataSource getGeneratingDataSource();
+
     @Override
     public String toString() {
         return super.toString()+"[label="+getClassLabel().getValue()+"]";

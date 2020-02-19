@@ -39,9 +39,6 @@ public class DomainDataEntity extends DataEntity {
      *
      * @return the generating DataSource.
      */
-//    public Optional<DataSource> getGeneratingDataSource() {
-//        return Optional.ofNullable(this.generatingDataSource);
-//    }
     public final DataSource getGeneratingDataSource() {
         return this.generatingDataSource;
     }
