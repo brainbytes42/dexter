@@ -72,10 +72,10 @@ class CsvDataSource extends FileDataSource {
 
             List<FeatureSpace.Feature> features = header.subList(2, header.size())
                                                         .stream()
-                                                        .map(s -> new FeatureSpace.Feature(s, "Feature '" + s + "'"))
+                                                        .map(s -> new FeatureSpace.Feature(s))
                                                         .collect(Collectors.toList());
             domainAdapter.setFeatureSpace(
-                    domainAdapter.getFeatureSpace().getValue().orElseGet(() -> new FeatureSpace("CSV", "CSV Feature Space", features)));
+                    domainAdapter.getFeatureSpace().getValue().orElseGet(() -> new FeatureSpace("CSV", features)));
 
             final FeatureSpace featureSpace = domainAdapter.getFeatureSpace()
                                                            .toObservable()

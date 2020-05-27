@@ -8,15 +8,15 @@ class FeatureSpaceTest extends Specification {
 
 
     @Shared
-    def featureA = new FeatureSpace.Feature("Feature A", "")
+    def featureA = new FeatureSpace.Feature("Feature A")
     @Shared
-    def featureB = new FeatureSpace.Feature("Feature B", "")
+    def featureB = new FeatureSpace.Feature("Feature B")
     @Shared
-    def featureC = new FeatureSpace.Feature("Feature C", "")
+    def featureC = new FeatureSpace.Feature("Feature C")
 
     def featureList = [featureA, featureB, featureC]
 
-    def featureSpace = new FeatureSpace("Feature Space", "My Features", featureList)
+    def featureSpace = new FeatureSpace("Feature Space", featureList)
 
     def "Constructor sets all values"() {
         expect:
@@ -43,7 +43,7 @@ class FeatureSpaceTest extends Specification {
 
     def "List of Features is non-null and contains no null"() {
         when:
-            new FeatureSpace("Name", "Description", list)
+            new FeatureSpace("Name", list)
 
         then:
             thrown(NullPointerException)
@@ -79,12 +79,12 @@ class FeatureSpaceTest extends Specification {
 
     def "feature space is at least one-dimensional"() {
         when:
-            new FeatureSpace("Feature Space", "My Features", [])
+            new FeatureSpace("Feature Space", [])
         then:
             thrown(IllegalArgumentException)
 
         expect:
-            new FeatureSpace("Feature Space", "My Features", [featureA])
+            new FeatureSpace("Feature Space", [featureA])
 
     }
 

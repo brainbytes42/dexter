@@ -91,7 +91,7 @@ public class DataSource extends DataNode {
     protected final void setChildDataSources(Collection<DataSource> dataSources) {
         checkNotNull(dataSources).forEach(Preconditions::checkNotNull);
         dataSources.forEach(dataSource -> checkArgument(getFeatureSpace().equals(dataSource.getFeatureSpace()),
-                                                        "FeatureSpace doesn't match for added DataSource: " + dataSource));
+                                                        "FeatureSpace doesn't match for added DataSource [" + dataSource+"]: expected ["+getFeatureSpace()+"], but was: ["+dataSource.getFeatureSpace()+"]"));
 
         this.childDataSources.setValue(Collections.unmodifiableList(new ArrayList<>(dataSources)));
     }
@@ -122,7 +122,7 @@ public class DataSource extends DataNode {
         return this.generatedDataEntities.toReadOnlyView();
     }
 
-    protected final void setGeneratedDataEntities(List<DomainDataEntity> generatedDataEntities) {
+    protected final void setGeneratedDataEntities(List<? extends DomainDataEntity> generatedDataEntities) {
         checkNotNull(generatedDataEntities).forEach(Preconditions::checkNotNull);
         generatedDataEntities.forEach(dataEntity -> checkArgument(getFeatureSpace().equals(dataEntity.getFeatureSpace()),
                                                                   "FeatureSpace doesn't match for added DataEntity: " + dataEntity));

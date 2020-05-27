@@ -10,6 +10,7 @@ import de.panbytes.dexter.core.data.DataNode.EnabledState;
 import de.panbytes.dexter.core.data.DataNode.Status;
 import de.panbytes.dexter.core.data.DataSource;
 import de.panbytes.dexter.core.data.DomainDataEntity;
+import de.panbytes.dexter.core.model.DexterModel;
 import de.panbytes.dexter.lib.util.reactivex.extensions.RxField;
 import de.panbytes.dexter.lib.util.reactivex.extensions.RxFieldReadOnly;
 import de.panbytes.dexter.util.Named;
@@ -113,7 +114,7 @@ public abstract class DomainAdapter extends Named.BaseImpl implements Named {
                           .map(entityOpt -> entityOpt.stream().filter(Optional::isPresent).map(Optional::get).collect(Collectors.toList()));
     }
 
-    protected AppContext getAppContext() {
+    public AppContext getAppContext() {
         return this.appContext;
     }
 
@@ -176,6 +177,14 @@ public abstract class DomainAdapter extends Named.BaseImpl implements Named {
 
     public Observable<Optional<Node>> getDomainInspectionView(DataEntity inspectionTarget) {
         return Observable.just(Optional.empty());
+    }
+
+    /**
+     * Will be called once after DexterCore is initialized to provide the model to the DomainAdapter if necessary.
+     * @param dexterModel
+     */
+    public void initDexterModel(DexterModel dexterModel) {
+        // do nothing by default - only relevant if extending class needs the model
     }
 
     @Deprecated

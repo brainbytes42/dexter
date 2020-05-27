@@ -358,7 +358,7 @@ public class ActiveLearningModel {
 
         List<Attribute> featureAttributes = featureSpace.getFeatures()
                                                         .stream()
-                                                        .map(feature -> new Attribute(feature.getName().getValue()))
+                                                        .map(feature -> new Attribute(feature.getName()))
                                                         .collect(Collectors.toList());
         Attribute classAttribute = new Attribute("class", this.classLabels.stream().map(ClassLabel::getLabel).collect(Collectors.toList()));
         //                                                 trainingSet.parallelStream()

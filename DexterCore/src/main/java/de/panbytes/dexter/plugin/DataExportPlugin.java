@@ -91,7 +91,6 @@ public class DataExportPlugin extends DexterPlugin {
                                                                                                         .getFeatures()
                                                                                                         .stream()
                                                                                                         .map(FeatureSpace.Feature::getName)
-                                                                                                        .map(RxFieldReadOnly::getValue)
                                                                                                         .collect(Collectors.joining(
                                                                                                                 DataExportPlugin.this.CSV_DELIMITER)))
                                                                             .toString()),

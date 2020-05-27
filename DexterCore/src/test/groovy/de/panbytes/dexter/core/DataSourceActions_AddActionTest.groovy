@@ -11,14 +11,14 @@ import java.util.function.Function
 class DataSourceActions_AddActionTest extends Specification {
 
     DomainAdapter domainAdapter = Spy(constructorArgs: ["MyAdapter", ""])
-    FeatureSpace featureSpace = new FeatureSpace("FeatureSpace", "", [Mock(FeatureSpace.Feature)])
+    FeatureSpace featureSpace = new FeatureSpace("FeatureSpace", [Mock(FeatureSpace.Feature)])
     DataSource dataSource1 = new DataSource("TestSource1", "", featureSpace)
     DataSource dataSource2 = new DataSource("TestSource2", "", featureSpace)
 
     Function<Collection<DataSource>, DataSourceActions.AddAction> actionSupplier = { srcs ->
         new DataSourceActions.AddAction("MyAction", "Add Source", domainAdapter) {
             @Override
-            Collection<DataSource> createDataSources(DataSourceActions.AddAction.ActionContext context) {
+            Optional<Collection<DataSource>> createDataSources(DataSourceActions.AddAction.ActionContext context) {
                 return srcs
             }
         }

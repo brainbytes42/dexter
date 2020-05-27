@@ -43,7 +43,7 @@ public class AddCsvFileAction extends DataSourceActions.AddAction {
     }
 
     @Override
-    protected Collection<DataSource> createDataSources(ActionContext context) {
+    protected Optional<Collection<DataSource>> createDataSources(ActionContext context) {
 
         final List<File> files = selectFiles(context);
 

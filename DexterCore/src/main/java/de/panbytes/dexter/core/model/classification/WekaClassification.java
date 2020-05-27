@@ -44,7 +44,7 @@ public class WekaClassification extends Classifier.TrainingTask {
 
         List<Attribute> featureAttributes = featureSpace.getFeatures()
                                                         .stream()
-                                                        .map(feature -> new Attribute(feature.getName().getValue()))
+                                                        .map(feature -> new Attribute(feature.getName()))
                                                         .collect(Collectors.toList());
 
 

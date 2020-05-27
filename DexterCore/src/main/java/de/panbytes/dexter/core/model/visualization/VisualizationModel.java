@@ -88,9 +88,9 @@ public class VisualizationModel {
                                 DimensionMapping.MappingProcessor mappingProcessor = new StochasticNeigborEmbedding().mapAsync(dataMatrix, context);
                                 System.out.println("MAPPING! @ " + Thread.currentThread()); //TODO remove
 
-                                FeatureSpace featureSpace = new FeatureSpace("2D-Mapping", "Mapping to two dimensions",
-                                    Arrays.asList(new FeatureSpace.Feature("x1", "first of two dimensions"),
-                                        new FeatureSpace.Feature("x2", "second of two dimensions")));
+                                FeatureSpace featureSpace = new FeatureSpace("2D-Mapping",
+                                                                             Arrays.asList(new FeatureSpace.Feature("x1"),
+                                        new FeatureSpace.Feature("x2")));
 
                                 Observable.<double[][]>create(listenerEmitter -> mappingProcessor.addIntermediateResultListener(
                                     (newIntermediateResult, source) -> listenerEmitter.onNext(newIntermediateResult))).forEachWhile(newIntermediateResult -> {

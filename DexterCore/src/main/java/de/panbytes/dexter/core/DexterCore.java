@@ -45,6 +45,9 @@ public class DexterCore {
         // create model
         this.dexterModel = new DexterModel(domainAdapter, appContext);
 
+        // provide model to domain adapter
+        domainAdapter.initDexterModel(this.dexterModel);
+
         // register export plugin
         // TODO: is this the best place to add plugins?
         appContext.getPluginRegistry().add(new DataExportPlugin(this.domainAdapter, this.dexterModel));

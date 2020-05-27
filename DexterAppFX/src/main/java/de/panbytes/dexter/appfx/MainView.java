@@ -204,7 +204,7 @@ public class MainView {
                                 .map(
                                     e -> defaultActionOpt.get().createAndAdd(new DataSourceActions.AddAction.ActionContext(this.addDataSourcesSplitMenuButton)))
                                 .observeOn(JavaFxScheduler.platform())
-                                .subscribe(result -> displayAddActionResultMessage(result));
+                                .subscribe(this::displayAddActionResultMessage);
             } else {
                 this.addDataSourcesSplitMenuButton.setText("N/A");
                 this.addDataSourcesSplitMenuButton.setTooltip(new Tooltip("No Action available."));
@@ -646,10 +646,12 @@ public class MainView {
     private void displayAddActionResultMessage(DataSourceActions.AddAction.Result result) {
         switch (result.getState()) {
             case SUCCESS:
-                if (result.getCreatedSources().isEmpty()) {
+                if (result.getCreatedSources().orElseThrow(() -> new IllegalStateException("Result for Success has empty Optional of created sources!")).isEmpty()) {
                     new Alert(AlertType.INFORMATION, "DataSource was successfully added but contains no Data: " + result.getMessage(),
                         ButtonType.OK).showAndWait();
-                }
+                }  // else: do nothing
+                break;
+            case CANCELLED: // do nothing
                 break;
             case CREATION_FAILED:
             case ADDING_FAILED:

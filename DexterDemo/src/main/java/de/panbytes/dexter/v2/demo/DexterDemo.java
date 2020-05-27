@@ -25,10 +25,9 @@ public class DexterDemo extends DexterApp {
 
     public DexterDemo() {
         List<FeatureSpace.Feature> features = IntStream.range(0, 784)
-                                                       .mapToObj(i -> new FeatureSpace.Feature("x_" + i,
-                                                                                               "MNIST-Feature-Dimension " + i ))
+                                                       .mapToObj(i -> new FeatureSpace.Feature("x_" + i))
                                                        .collect(Collectors.toList());
-        featureSpace = new FeatureSpace("MNIST", "MNIST Dataset", features);
+        featureSpace = new FeatureSpace("MNIST", features);
     }
 
     public static void main(String[] args) throws URISyntaxException {
@@ -118,7 +117,7 @@ public class DexterDemo extends DexterApp {
 
             this.getDataSourceActions().setAddActions(new DataSourceActions.AddAction("MNIST", "MNIST Dataset", this) {
                 @Override
-                protected Collection<DataSource> createDataSources(ActionContext context) {
+                protected Optional<Collection<DataSource>> createDataSources(ActionContext context) {
                     return Arrays.asList(new MnistDataSource("MNIST", "MNIST Dataset", featureSpace, 5000));
                 }
             });

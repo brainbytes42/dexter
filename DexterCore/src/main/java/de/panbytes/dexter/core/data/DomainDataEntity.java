@@ -14,6 +14,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public class DomainDataEntity extends DataEntity {
 
     private static final Logger log = LoggerFactory.getLogger(DomainDataEntity.class);
+    protected final ClassLabel initialClassLabel;
 
     private final RxField<Optional<ClassLabel>> classLabel = RxField.initiallyEmpty();
     private final RxField<Boolean> inspected = RxField.withInitialValue(false);
@@ -29,9 +30,12 @@ public class DomainDataEntity extends DataEntity {
      * @throws NullPointerException if name, description, coordinates, featureSpace or generatingDataSource are null.
      * @see DataEntity#DataEntity(String, String, double[], FeatureSpace)
      */
-    public DomainDataEntity(String name, String description, double[] coordinates, FeatureSpace featureSpace, DataSource generatingDataSource) {
+    public DomainDataEntity(String name, String description, double[] coordinates, FeatureSpace featureSpace, DataSource generatingDataSource,
+        ClassLabel initialClassLabel) {
         super(name, description, coordinates, featureSpace);
         this.generatingDataSource = checkNotNull(generatingDataSource);
+        this.initialClassLabel = initialClassLabel;
+        setClassLabel(initialClassLabel);
     }
 
     /**
@@ -87,4 +91,7 @@ public class DomainDataEntity extends DataEntity {
         this.inspected.setValue(inspected);
     }
 
+    public Optional<ClassLabel> getInitialClassLabel() {
+        return Optional.ofNullable(initialClassLabel);
+    }
 }

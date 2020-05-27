@@ -49,26 +49,26 @@ public abstract class DexterApp extends Application {
 
         super.init();
 
-        AppContext appContext = new AppContext(createGeneralSettings(), createDomainSettings());
-        DomainAdapter domainAdapter = createDomainAdapter(appContext);
+        AppContext appContext = new AppContext(createGeneralSettings(getDomainIdentifier()), createDomainSettings(getDomainIdentifier()));
 
-        this.dexterCore = new DexterCore(domainAdapter, appContext);
+        this.dexterCore = new DexterCore(createDomainAdapter(appContext), appContext);
+
 
         log.debug("Application has been initialized.");
 
     }
 
-    private GeneralSettings createGeneralSettings() {
-        GeneralSettings generalSettings = new GeneralSettings(getDomainIdentifier());
+    private GeneralSettings createGeneralSettings(String domainIdentifier) {
+        GeneralSettings generalSettings = new GeneralSettings(domainIdentifier);
         generalSettings.setSettingsViewSupplier(
             new DexterGeneralSettingsView(generalSettings)::createView);
         return generalSettings;
     }
 
-    protected DomainSettings createDomainSettings() {
-        return new DomainSettings(getDomainIdentifier());
+    protected DomainSettings createDomainSettings(String domainIdentifier) {
+        return new DomainSettings(domainIdentifier);
     }
-    protected abstract String getDomainIdentifier();
+    public abstract String getDomainIdentifier();
 
     protected abstract DomainAdapter createDomainAdapter(AppContext appContext);
 
