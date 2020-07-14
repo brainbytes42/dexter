@@ -5,5 +5,5 @@ mainClassName = 'de.panbytes.dexter.v2.demo.DexterDemo'
 
 dependencies {
     compile project(':DexterAppFX')
-    compile 'com.github.jeffgriffith:mnist-reader:master-SNAPSHOT'
+    compile 'com.github.jeffgriffith:mnist-reader:master'
 }

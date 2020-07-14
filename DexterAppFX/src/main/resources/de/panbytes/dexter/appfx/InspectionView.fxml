@@ -58,9 +58,9 @@
         </MenuButton>
         <SegmentedButton ButtonBar.buttonData="OK_DONE" ButtonBar.buttonUniformSize="false">
           <buttons>
-            <ToggleButton fx:id="confirmLabelButton" mnemonicParsing="false" text="Confirm current Label" />
-            <ToggleButton fx:id="useSuggestedLabelButton" mnemonicParsing="false" text="Use suggested Label" />
-            <ToggleButton fx:id="rejectEntityButton" mnemonicParsing="false" text="Reject Entity" />
+            <ToggleButton fx:id="useSuggestedLabelButton" text="Use _suggested Label" textFill="#4464cd" />
+            <ToggleButton fx:id="confirmLabelButton" text="Confirm _current Label" textFill="#36a402" />
+            <ToggleButton fx:id="rejectEntityButton" text="_Reject Entity" textFill="#bf2828" />
           </buttons>
         </SegmentedButton>
         <Button fx:id="closeInspectionButton" cancelButton="true" mnemonicParsing="false" text="Close" ButtonBar.buttonData="CANCEL_CLOSE" />

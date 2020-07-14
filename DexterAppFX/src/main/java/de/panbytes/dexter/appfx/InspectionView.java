@@ -371,7 +371,7 @@ public class InspectionView {
         //
         // Button: Confirm current Label
         //
-        disposable = classLabelObs.map(opt -> "Confirm current Label" + opt.map(lbl -> " [" + lbl.getLabel() + "]").orElse(""))
+        disposable = classLabelObs.map(opt -> "Confirm _current Label" + opt.map(lbl -> " [" + lbl.getLabel() + "]").orElse(""))
                                   .subscribe(text -> this.confirmLabelButton.setText(text));
         this.lifecycleDisposable.add(disposable);
 
@@ -393,7 +393,7 @@ public class InspectionView {
         // Button: Use / change to suggested Label
         //
         disposable = Observable.combineLatest(classLabelObs, suggestionObs, //
-                                              (label, suggestion) -> label.map(__ -> "Change to").orElse("Use") + " suggested Label" + suggestion.map(
+                                              (label, suggestion) -> label.map(__ -> "Change to").orElse("Use") + " _suggested Label" + suggestion.map(
                                                   s -> " [" + s + "]").orElse(""))
                                .observeOn(JavaFxScheduler.platform())
                                .subscribe(text -> this.useSuggestedLabelButton.setText(text));

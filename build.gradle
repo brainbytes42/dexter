@@ -41,6 +41,9 @@ subprojects {
 
 	apply plugin: 'groovy' // for Spock testing-framework
 
+	compileJava.options.encoding = "UTF-8"
+	compileTestJava.options.encoding = "UTF-8"
+
 	/*
 	 * reroute JARs to build-folder inside root. 
 	 */

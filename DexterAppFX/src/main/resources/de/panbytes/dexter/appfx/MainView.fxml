@@ -22,52 +22,47 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<VBox prefHeight="750.0" prefWidth="1200.0" stylesheets="@ChartColorScheme120.css"
-  xmlns="http://javafx.com/javafx/8.0.172-ea" xmlns:fx="http://javafx.com/fxml/1"
-  fx:controller="de.panbytes.dexter.appfx.MainView">
+<VBox prefHeight="750.0" prefWidth="1200.0" stylesheets="@ChartColorScheme120.css" xmlns="http://javafx.com/javafx/8.0.172-ea" xmlns:fx="http://javafx.com/fxml/1" fx:controller="de.panbytes.dexter.appfx.MainView">
   <children>
     <MenuBar fx:id="menuBar" VBox.vgrow="NEVER">
       <menus>
         <Menu mnemonicParsing="false" text="File">
           <items>
-            <MenuItem mnemonicParsing="false" onAction="#showSettingsDialog" text="Settings"/>
+            <MenuItem mnemonicParsing="false" onAction="#showSettingsDialog" text="Settings" />
           </items>
         </Menu>
       </menus>
     </MenuBar>
-    <SplitPane fx:id="mainSplitPane" dividerPositions="0.2" focusTraversable="true"
-      VBox.vgrow="ALWAYS">
+    <SplitPane fx:id="mainSplitPane" dividerPositions="0.2" focusTraversable="true" VBox.vgrow="ALWAYS">
       <items>
         <BorderPane SplitPane.resizableWithParent="false">
           <top>
             <Label text="DataSources" BorderPane.alignment="CENTER">
               <font>
-                <Font size="14.0"/>
+                <Font size="14.0" />
               </font>
             </Label>
           </top>
           <bottom>
             <ButtonBar buttonOrder="" BorderPane.alignment="CENTER">
               <buttons>
-                <SplitMenuButton fx:id="addDataSourcesSplitMenuButton" mnemonicParsing="false"
-                  text="Add DataSource"/>
-                <Button fx:id="removeDataSourcesButton" disable="true" mnemonicParsing="false"
-                  onAction="#removeDataSource" text="Remove"/>
+                <SplitMenuButton fx:id="addDataSourcesSplitMenuButton" mnemonicParsing="false" text="Add DataSource" />
+                <Button fx:id="removeDataSourcesButton" disable="true" mnemonicParsing="false" onAction="#removeDataSource" text="Remove" />
               </buttons>
             </ButtonBar>
           </bottom>
           <center>
-            <TreeView fx:id="dataSourceTree" showRoot="false" BorderPane.alignment="CENTER"/>
+            <TreeView fx:id="dataSourceTree" showRoot="false" BorderPane.alignment="CENTER" />
           </center>
         </BorderPane>
         <BorderPane>
           <center>
             <InteractiveScatterChart fx:id="scatterChart">
               <xAxis>
-                <NumberAxis side="BOTTOM"/>
+                <NumberAxis side="BOTTOM" />
               </xAxis>
               <yAxis>
-                <NumberAxis side="LEFT"/>
+                <NumberAxis side="LEFT" />
               </yAxis>
             </InteractiveScatterChart>
           </center>
@@ -76,54 +71,44 @@
               <children>
                 <GridPane>
                   <columnConstraints>
-                    <ColumnConstraints/>
-                    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0"/>
-                    <ColumnConstraints minWidth="10.0"/>
-                    <ColumnConstraints minWidth="10.0" prefWidth="100.0"/>
-                    <ColumnConstraints/>
-                    <ColumnConstraints/>
+                    <ColumnConstraints />
+                    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" />
+                    <ColumnConstraints minWidth="10.0" />
+                    <ColumnConstraints minWidth="10.0" prefWidth="100.0" />
+                    <ColumnConstraints />
+                    <ColumnConstraints />
                   </columnConstraints>
                   <rowConstraints>
-                    <RowConstraints minHeight="10.0" vgrow="SOMETIMES"/>
+                    <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
                   </rowConstraints>
                   <children>
-                    <ToggleButton fx:id="enableDimReductionButton" mnemonicParsing="false"
-                      selected="true" text="Enable Dim.Reduction"/>
-                    <Button fx:id="pickUnlabeledButton" disable="true" mnemonicParsing="false"
-                      text="Pick Unlabeled" GridPane.columnIndex="4"/>
-                    <SplitMenuButton fx:id="checkLabelButton" disable="true" mnemonicParsing="false"
-                      text="Check Label" GridPane.columnIndex="5">
+                    <ToggleButton fx:id="enableDimReductionButton" mnemonicParsing="false" selected="true" text="Enable Dim.Reduction" />
+                    <Button fx:id="pickUnlabeledButton" disable="true" text="_Pick Unlabeled" GridPane.columnIndex="4" />
+                    <SplitMenuButton fx:id="checkLabelButton" disable="true" text="_Verify Labeled" GridPane.columnIndex="5">
                       <items>
-                        <MenuItem fx:id="clearCheckLabelHistoryMenuItem" mnemonicParsing="false"
-                          text="Clear History"/>
+                        <MenuItem fx:id="clearCheckLabelHistoryMenuItem" mnemonicParsing="false" text="Clear History" />
                       </items>
                     </SplitMenuButton>
-                    <Button fx:id="evaluateModelButton" mnemonicParsing="false"
-                      text="Show Model-Evaluation" GridPane.columnIndex="2"/>
+                    <Button fx:id="evaluateModelButton" text="Show _Model-Evaluation" GridPane.columnIndex="2" />
                   </children>
                 </GridPane>
                 <TitledPane animated="false" text="Filter">
                   <content>
                     <AnchorPane>
                       <children>
-                        <GridPane AnchorPane.bottomAnchor="0.0"
-                          AnchorPane.leftAnchor="-9.600000000000023" AnchorPane.rightAnchor="0.0"
-                          AnchorPane.topAnchor="0.0">
+                        <GridPane AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="-9.600000000000023" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
                           <columnConstraints>
-                            <ColumnConstraints hgrow="SOMETIMES" maxWidth="932.0" minWidth="10.0"
-                              prefWidth="628.0"/>
-                            <ColumnConstraints fillWidth="false" hgrow="SOMETIMES" maxWidth="409.0"
-                              minWidth="10.0" prefWidth="316.0"/>
+                            <ColumnConstraints hgrow="SOMETIMES" maxWidth="932.0" minWidth="10.0" prefWidth="628.0" />
+                            <ColumnConstraints fillWidth="false" hgrow="SOMETIMES" maxWidth="409.0" minWidth="10.0" prefWidth="316.0" />
                           </columnConstraints>
                           <rowConstraints>
-                            <RowConstraints/>
-                            <RowConstraints vgrow="SOMETIMES"/>
+                            <RowConstraints />
+                            <RowConstraints vgrow="SOMETIMES" />
                           </rowConstraints>
                           <children>
                             <!--<TextField fx:id="filterTextField" onAction="#filterOkButtonAction" GridPane.rowIndex="1" />-->
                             <!--<Button mnemonicParsing="false" onAction="#filterOkButtonAction" text="OK" GridPane.columnIndex="1" GridPane.rowIndex="1" />-->
-                            <FlowPane fx:id="classFilterPane" hgap="15.0" prefWidth="944.0"
-                              GridPane.columnSpan="2"/>
+                            <FlowPane fx:id="classFilterPane" hgap="15.0" prefWidth="944.0" GridPane.columnSpan="2" />
                           </children>
                         </GridPane>
                       </children>
@@ -136,6 +121,6 @@
         </BorderPane>
       </items>
     </SplitPane>
-    <BorderPane fx:id="statusBar" minHeight="20.0"/>
+    <BorderPane fx:id="statusBar" minHeight="20.0" />
   </children>
 </VBox>

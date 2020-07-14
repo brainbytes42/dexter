@@ -22,8 +22,6 @@ import weka.classifiers.trees.RandomForest;
 
 public class ClassificationModel {
 
-    public static final int CROSS_VALIDATION_RUNS = 3;
-    public static final int CROSS_VALIDATION_FOLDS = 10;
     private static final Logger log = LoggerFactory.getLogger(ClassificationModel.class);
     private static final Supplier<weka.classifiers.Classifier> WEKA_CLASSIFIER_SUPPLIER = RandomForest::new;
     private final AppContext appContext;
@@ -40,14 +38,20 @@ public class ClassificationModel {
 
         // trigger inputData for changed coordinates, even if data set stays the same!
         // publish to be used by both labeled and unlabeled data without doubling the work.
-        ConnectableObservable<? extends Collection<? extends DataEntity>> inputTriggeredOnChangedCoordinates = inputData.observeOn(Schedulers.computation()).switchMap(
-            entities -> RxJavaUtils.combineLatest(entities, DataEntity::coordinatesObs).map(__ -> entities).debounce(250, TimeUnit.MILLISECONDS)).publish();
+        ConnectableObservable<? extends Collection<? extends DataEntity>> inputTriggeredOnChangedCoordinates = inputData
+            .observeOn(Schedulers.computation())
+            .switchMap(entities -> RxJavaUtils.combineLatest(entities, DataEntity::coordinatesObs).map(__ -> entities).debounce(250, TimeUnit.MILLISECONDS))
+            .publish();
 
-        ConnectableObservable<List<DataEntity>> labeledData = inputTriggeredOnChangedCoordinates.compose(
-            RxJavaUtils.deepFilter(DataEntity::classLabelObs, Optional::isPresent)).debounce(250, TimeUnit.MILLISECONDS).publish();
+        ConnectableObservable<List<DataEntity>> labeledData = inputTriggeredOnChangedCoordinates
+            .compose(RxJavaUtils.deepFilter(DataEntity::classLabelObs, Optional::isPresent))
+            .debounce(250, TimeUnit.MILLISECONDS)
+            .publish();
 
-        ConnectableObservable<List<DataEntity>> unlabeledData = inputTriggeredOnChangedCoordinates.compose(
-            RxJavaUtils.deepFilter(DataEntity::classLabelObs, label -> !label.isPresent())).debounce(250, TimeUnit.MILLISECONDS).publish();
+        ConnectableObservable<List<DataEntity>> unlabeledData = inputTriggeredOnChangedCoordinates
+            .compose(RxJavaUtils.deepFilter(DataEntity::classLabelObs, label -> !label.isPresent()))
+            .debounce(250, TimeUnit.MILLISECONDS)
+            .publish();
 
         inputTriggeredOnChangedCoordinates.connect();
 
@@ -94,22 +98,49 @@ public class ClassificationModel {
         //                                     entities.stream().map(entity -> entity.getCoordinates().toObservable()).collect(Collectors.toList()))
         //                                         .debounce(250, TimeUnit.MILLISECONDS)
         //                                         .map(__ -> entities));
-        return labeledData.switchMapSingle(labeledEntities -> {
-            if (labeledEntities.size() >= ClassificationModel.CROSS_VALIDATION_FOLDS) {
-                log.debug("Creating cross-validation for {} entities...", labeledEntities.size());
 
-                final CrossValidation crossValidation = new CrossValidation(Schedulers.computation(), labeledEntities, labeledEntities.get(0).getFeatureSpace(),
-                    WEKA_CLASSIFIER_SUPPLIER, ClassificationModel.CROSS_VALIDATION_FOLDS, ClassificationModel.CROSS_VALIDATION_RUNS);
-                return crossValidation.result().map(Optional::of).doOnSubscribe(disposable -> this.appContext.getTaskMonitor().addTask(crossValidation));
+        final Observable<Integer> crossValidationRuns = appContext.getSettingsRegistry().getGeneralSettings().getCrossValidationRuns().toObservable();
+        final Observable<Integer> crossValidationFolds = appContext.getSettingsRegistry().getGeneralSettings().getCrossValidationFolds().toObservable();
 
-            } else {
-                log.debug("Not enough labeled entities available ({} < {} folds) for cross-validation...", labeledEntities.size(),
-                    ClassificationModel.CROSS_VALIDATION_FOLDS);
+        return Observable
+            .combineLatest(labeledData, crossValidationRuns, crossValidationFolds, (data, cvRuns, cvFolds) -> {
+                if (!data.isEmpty()) {
+                    try {
+                        final CrossValidation cv = new CrossValidation(Schedulers.computation(), data, data.get(0).getFeatureSpace(), WEKA_CLASSIFIER_SUPPLIER,
+                                                                       cvFolds, cvRuns);
+                        return Optional.of(cv);
+                    } catch (Exception e) {
+                        log.warn("Could not create CrossValidation!", e);
+                    }
+                }
+                return Optional.<CrossValidation>empty();
+            })
+            .switchMapSingle(cvOpt -> cvOpt
+                .map(crossValidation -> crossValidation
+                    .result()
+                    .map(Optional::of)
+                    .doOnSubscribe(disposable -> this.appContext.getTaskMonitor().addTask(crossValidation)))
+                .orElse(Single.just(Optional.empty())))
+            .replay(1)
+            .autoConnect();
 
-                return Single.just(Optional.<CrossValidation.CrossValidationResult>empty());
-
-            }
-        }).replay(1).autoConnect();
+//        return labeledData.switchMapSingle(labeledEntities -> {
+//            if (labeledEntities.size() >= ClassificationModel.CROSS_VALIDATION_FOLDS) {
+//                log.debug("Creating cross-validation for {} entities...", labeledEntities.size());
+//
+//                final CrossValidation crossValidation = new CrossValidation(Schedulers.computation(), labeledEntities, labeledEntities.get(0).getFeatureSpace(),
+//                                                                            WEKA_CLASSIFIER_SUPPLIER, ClassificationModel.CROSS_VALIDATION_FOLDS,
+//                                                                            ClassificationModel.CROSS_VALIDATION_RUNS);
+//                return crossValidation.result().map(Optional::of).doOnSubscribe(disposable -> this.appContext.getTaskMonitor().addTask(crossValidation));
+//
+//            } else {
+//                log.debug("Not enough labeled entities available ({} < {} folds) for cross-validation...", labeledEntities.size(),
+//                          ClassificationModel.CROSS_VALIDATION_FOLDS);
+//
+//                return Single.just(Optional.<CrossValidation.CrossValidationResult>empty());
+//
+//            }
+//        }).replay(1).autoConnect();
     }
 
     private Observable<Optional<Map<DataEntity, Classifier.ClassificationResult>>> initClassificationResults(Observable<List<DataEntity>> labeledData,
@@ -132,7 +163,7 @@ public class ClassificationModel {
             if (labeledEntities.size() > 0) {
                 log.debug("Creating classifier for {} entities...", labeledEntities.size());
                 return Optional.of(new WekaClassification(Schedulers.computation(), new HashSet<>(labeledEntities), labeledEntities.get(0).getFeatureSpace(),
-                    WEKA_CLASSIFIER_SUPPLIER));
+                                                          WEKA_CLASSIFIER_SUPPLIER));
             } else {
                 log.debug("No labeled entities available to train a classifier...");
                 return Optional.<WekaClassification>empty();
