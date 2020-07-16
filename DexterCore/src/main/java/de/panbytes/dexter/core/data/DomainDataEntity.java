@@ -1,15 +1,14 @@
 package de.panbytes.dexter.core.data;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import de.panbytes.dexter.core.domain.FeatureSpace;
 import de.panbytes.dexter.lib.util.reactivex.extensions.RxField;
 import de.panbytes.dexter.lib.util.reactivex.extensions.RxFieldReadOnly;
 import io.reactivex.Observable;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Optional;
-
-import static com.google.common.base.Preconditions.checkNotNull;
 
 public class DomainDataEntity extends DataEntity {
 
@@ -23,9 +22,9 @@ public class DomainDataEntity extends DataEntity {
     /**
      * Create a new {@code DataEntity} with given name, description and state.
      *
-     * @param name         the entity's name.
-     * @param description  the entity's description.
-     * @param coordinates  the entity's coordinates
+     * @param name the entity's name.
+     * @param description the entity's description.
+     * @param coordinates the entity's coordinates
      * @param featureSpace the entity's feature space
      * @throws NullPointerException if name, description, coordinates, featureSpace or generatingDataSource are null.
      * @see DataEntity#DataEntity(String, String, double[], FeatureSpace)
@@ -35,7 +34,7 @@ public class DomainDataEntity extends DataEntity {
         super(name, description, coordinates, featureSpace);
         this.generatingDataSource = checkNotNull(generatingDataSource);
         this.initialClassLabel = initialClassLabel;
-        setClassLabel(initialClassLabel);
+        this.classLabel.setValue(Optional.ofNullable(initialClassLabel));
     }
 
     /**
@@ -47,18 +46,18 @@ public class DomainDataEntity extends DataEntity {
         return this.generatingDataSource;
     }
 
-//    final synchronized void setGeneratingDataSource(DataSource generatingDataSource) {
-//        this.generatingDataSource = generatingDataSource;
+    //    final synchronized void setGeneratingDataSource(DataSource generatingDataSource) {
+    //        this.generatingDataSource = generatingDataSource;
 
-        // TODO is this necessary?
-//        if (this.generatingDataSource == null) {
-//            this.generatingDataSource = checkNotNull(generatingDataSource);
-//        } else if (this.generatingDataSource == generatingDataSource) {
-//            log.debug("Ignored attempt to set same generating DataSource again!");
-//        } else {
-//            throw new IllegalStateException("Generating DataSource has already been set!");
-//        }
-//    }
+    // TODO is this necessary?
+    //        if (this.generatingDataSource == null) {
+    //            this.generatingDataSource = checkNotNull(generatingDataSource);
+    //        } else if (this.generatingDataSource == generatingDataSource) {
+    //            log.debug("Ignored attempt to set same generating DataSource again!");
+    //        } else {
+    //            throw new IllegalStateException("Generating DataSource has already been set!");
+    //        }
+    //    }
 
     /**
      * Get the entity's class label.
@@ -77,7 +76,10 @@ public class DomainDataEntity extends DataEntity {
      */
     @Override
     public final DataEntity setClassLabel(ClassLabel classLabel) {
-        this.classLabel.setValue(Optional.ofNullable(classLabel));
+        final Optional<ClassLabel> newClassLabel = Optional.ofNullable(classLabel);
+        log.info("Set ClassLabel for '{}' ({}) to '{}' (was '{}').", getName().getValue(), getGeneratingDataSource().getName().getValue(),
+                 newClassLabel.map(ClassLabel::getLabel).orElse("--"), this.classLabel.getValue().map(ClassLabel::getLabel).orElse("--"));
+        this.classLabel.setValue(newClassLabel);
         return this;
     }
 
@@ -91,6 +93,7 @@ public class DomainDataEntity extends DataEntity {
         this.inspected.setValue(inspected);
     }
 
+    @Override
     public Optional<ClassLabel> getInitialClassLabel() {
         return Optional.ofNullable(initialClassLabel);
     }

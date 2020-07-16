@@ -1,4 +1,4 @@
-group 'de.panbytes.dexter.impl.csv'
+group 'de.brainbytes.dexter.impl.csv'
 version '0.1-SNAPSHOT'
 
 apply plugin: 'application'

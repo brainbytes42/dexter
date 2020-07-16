@@ -74,7 +74,12 @@ public final class MappedDataEntity extends DataEntity {
 
     @Override
     public DataSource getGeneratingDataSource() {
-        return getMappedDataEntity().getGeneratingDataSource();
+        return mappedDataEntity.getGeneratingDataSource();
+    }
+
+    @Override
+    public Optional<ClassLabel> getInitialClassLabel() {
+        return mappedDataEntity.getInitialClassLabel();
     }
 
     /**

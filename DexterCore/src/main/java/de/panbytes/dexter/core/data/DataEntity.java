@@ -120,4 +120,6 @@ public abstract class DataEntity extends DataNode {
     public String toString() {
         return super.toString()+"[label="+getClassLabel().getValue()+"]";
     }
+
+    public abstract Optional<ClassLabel> getInitialClassLabel();
 }

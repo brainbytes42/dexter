@@ -34,7 +34,7 @@ public class DataExportPlugin extends DexterPlugin {
     private final NumberFormat CSV_NUMBER_FORMAT = new DecimalFormat("0.##########E0");
 
     public DataExportPlugin(DomainAdapter domainAdapter, DexterModel dexterModel) {
-        super("Export data set", "Write (filtered) domain data to File.");
+        super("Export Data Set", "Write (filtered) domain data to File.");
 
         setActions(Arrays.asList(new WriteCsvAction(domainAdapter, dexterModel, true), new WriteCsvAction(domainAdapter, dexterModel, false)));
 
