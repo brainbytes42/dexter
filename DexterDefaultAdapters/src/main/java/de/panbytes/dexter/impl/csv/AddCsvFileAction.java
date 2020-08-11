@@ -70,7 +70,7 @@ public class AddCsvFileAction extends DataSourceActions.AddAction {
 
         this.appContext.getTaskMonitor().addTask(createDataSourcesTask);
 
-        return createDataSourcesTask.result().blockingGet();
+        return Optional.of(createDataSourcesTask.result().blockingGet());
 
     }
 

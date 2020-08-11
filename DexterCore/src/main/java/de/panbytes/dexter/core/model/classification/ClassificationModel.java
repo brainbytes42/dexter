@@ -61,19 +61,6 @@ public class ClassificationModel {
         labeledData.connect();
         unlabeledData.connect();
 
-        //TODO remove
-        this.classificationResults.subscribe(resultMap -> log.debug("ClassificationModel / ClassificationResults: {}", resultMap));
-
-        //TODO remove
-        this.crossValidationResults.subscribe(resultOpt -> {
-            if (resultOpt.isPresent()) {
-                log.debug("ClassificationModel / CrossValidation: {}", resultOpt.get().getClassificationResults());
-            } else {
-                System.out.println("ClassificationModel / No CrossValidationResult available ...");
-            }
-        });
-
-
     }
 
     public Observable<Optional<Map<DataEntity, Classifier.ClassificationResult>>> getClassificationResults() {
@@ -121,8 +108,10 @@ public class ClassificationModel {
                     .map(Optional::of)
                     .doOnSubscribe(disposable -> this.appContext.getTaskMonitor().addTask(crossValidation)))
                 .orElse(Single.just(Optional.empty())))
+            .doOnNext(resultOpt->log.debug("CrossValidation Results: {}", resultOpt.map(result->String.format("%,d Entities mapped.",result.getClassificationResults().size())).orElse("n/a")))
             .replay(1)
             .autoConnect();
+
 
 //        return labeledData.switchMapSingle(labeledEntities -> {
 //            if (labeledEntities.size() >= ClassificationModel.CROSS_VALIDATION_FOLDS) {
@@ -192,7 +181,11 @@ public class ClassificationModel {
             } else {
                 return Observable.just(Optional.<Map<DataEntity, Classifier.ClassificationResult>>empty());
             }
-        }).switchMap(obs -> obs).replay(1).autoConnect();
+        })
+                         .switchMap(obs -> obs)
+                         .doOnNext(results -> log.debug("Classification Results: {}",results.map(
+                             map -> String.format("%,d Entities mapped.", map.size())).orElse("n/a")))
+                         .replay(1).autoConnect();
 
     }
 

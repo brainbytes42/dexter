@@ -93,10 +93,9 @@ public abstract class DomainAdapter extends Named.BaseImpl implements Named {
                                                                                               status -> status == Status.ACTIVE)))
                                                                                       .orElse(Observable.just(Collections.emptyList())))
                                              .distinctUntilChanged()
+                                             .doOnNext(entities -> log.debug("DomainAdapter has {} DataEntities.", entities.size()))
                                              .replay(1)
                                              .refCount();
-
-        this.domainData.subscribe(entities -> System.out.println("DomainAdapter / DomainData: " + entities.size())); // TODO remove
 
         // changed labels -> inspection history
         this.domainData.switchMap(entities -> Observable.fromIterable(entities)
