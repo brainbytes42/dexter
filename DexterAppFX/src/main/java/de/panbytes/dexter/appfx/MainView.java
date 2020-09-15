@@ -327,8 +327,11 @@ public class MainView {
 
         JavaFxObservable.actionEventsOf(this.pickUnlabeledButton)
                         .switchMap(actionEvent -> this.dexterModel.getActiveLearningModel().getClassificationUncertainty().firstElement().toObservable())
-                        .filter(list -> !list.isEmpty())
-                        .map(list -> list.get(0))
+                        // TODO: isInspected() isn't used currently
+                        // .map(list->list.stream().filter(uncertainty->uncertainty.getDataEntity().isInspected().blockingFirst()).findFirst())
+                        .map(list->list.stream().filter(uncertainty->!this.dexterCore.getAppContext().getInspectionHistory().getLabeledEntities().blockingFirst().contains(uncertainty.getDataEntity())).findFirst())
+                        .filter(Optional::isPresent)
+                        .map(Optional::get)
                         .map(ActiveLearningModel.AbstractUncertainty::getDataEntity)
                         .subscribe(leastConfident -> InspectionView.createAndShow(this.dexterCore, leastConfident));
 
@@ -347,8 +350,11 @@ public class MainView {
 
         JavaFxObservable.actionEventsOf(this.checkLabelButton)
                         .withLatestFrom(uncheckedUncertainties, (actionEvent, crossValidationUncertainties) -> crossValidationUncertainties)
-                        .filter(list -> !list.isEmpty())
-                        .map(list -> list.get(0))
+                        // TODO: isInspected() isn't used currently
+                        // .map(list->list.stream().filter(uncertainty->uncertainty.getDataEntity().isInspected().blockingFirst()).findFirst())
+                        .map(list->list.stream().filter(uncertainty->!this.dexterCore.getAppContext().getInspectionHistory().getLabeledEntities().blockingFirst().contains(uncertainty.getDataEntity())).findFirst())
+                        .filter(Optional::isPresent)
+                        .map(Optional::get)
                         .map(ActiveLearningModel.AbstractUncertainty::getDataEntity)
                         .subscribe(leastConfident -> InspectionView.createAndShow(this.dexterCore, leastConfident));
 

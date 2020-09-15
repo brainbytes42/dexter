@@ -264,7 +264,7 @@ public class ModelEvaluation {
                                                    .get(ResultClassification.TRUE_POSITIVE) + resultClassifications.get(
                                                    ResultClassification.FALSE_POSITIVE))),
 
-        TRUE_POSITIVE_RATE_RECALL("Recall / TP Rate",
+        TRUE_POSITIVE_RATE_RECALL("Recall",// = TP Rate = Sensitivity",
                                   "Sensitive for missed classifications: Correct positive classifications vs. real positives, i.e. TP/(TP+FN).",
                                   resultClassifications -> resultClassifications.get(ResultClassification.TRUE_POSITIVE) == 0
                                                            ? 0
@@ -273,20 +273,27 @@ public class ModelEvaluation {
                                                                    ResultClassification.TRUE_POSITIVE) + resultClassifications.get(
                                                                    ResultClassification.FALSE_NEGATIVE))),
 
+//        SPECIFITY("Specifity", "Sensitive for true negative classifications: Correct negative classifications vs. real negatives, i.e. TN/(FP+TN).",
+//                  resultClassifications -> resultClassifications.get(ResultClassification.TRUE_NEGATIVE)==0?0:resultClassifications.get(
+//                      ResultClassification.TRUE_NEGATIVE) / (double) (resultClassifications.get(
+//                      ResultClassification.FALSE_POSITIVE) + resultClassifications.get(
+//                      ResultClassification.TRUE_NEGATIVE))),
+
         F_MEASURE("F-Measure", "Combined Accuracy-Measure: Harmonic Average of Precision and Recall.", resultClassifications -> {
             final double precision = PRECISION.calc(resultClassifications);
             final double recall = TRUE_POSITIVE_RATE_RECALL.calc(resultClassifications);
             return (precision + recall) == 0 ? 0 : 2 * precision * recall / (precision + recall);
-        }),
+        })//,
 
-        FALSE_POSITIVE_RATE("FP Rate",
-                            "Describes the probability of falsely positive classifications: False positive classifications vs. real negatives, i.e. FP/(FP+TN)",
-                            resultClassifications -> resultClassifications.get(ResultClassification.FALSE_POSITIVE) == 0
-                                                     ? 0
-                                                     : resultClassifications.get(
-                                                             ResultClassification.FALSE_POSITIVE) / (double) (resultClassifications.get(
-                                                             ResultClassification.FALSE_POSITIVE) + resultClassifications.get(
-                                                             ResultClassification.TRUE_NEGATIVE)));
+//        FALSE_POSITIVE_RATE("FP Rate = 1-Specifity",
+//                            "Describes the probability of falsely positive classifications: False positive classifications vs. real negatives, i.e. FP/(FP+TN)",
+//                            resultClassifications -> resultClassifications.get(ResultClassification.FALSE_POSITIVE) == 0
+//                                                     ? 0
+//                                                     : resultClassifications.get(
+//                                                             ResultClassification.FALSE_POSITIVE) / (double) (resultClassifications.get(
+//                                                             ResultClassification.FALSE_POSITIVE) + resultClassifications.get(
+//                                                             ResultClassification.TRUE_NEGATIVE)))
+        ;
 
 
         final Function<Map<ResultClassification, Long>, Double> measureFunction;

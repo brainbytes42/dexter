@@ -51,9 +51,8 @@ public class DexterModel {
         // TODO work in progress
         this.filterManager = new FilterManager<>(domainAdapter.getDomainData());
         filteredDomainData = this.filterManager.getOutput().debounce(10, TimeUnit.MILLISECONDS);
-        filteredDomainData.subscribe(filterResults -> log.debug("FilterResults: " + filterResults));
+        filteredDomainData.subscribe(filterResults -> log.trace("FilterResults: " + filterResults));
 
-//        this.visualizationModel = new VisualizationModel(domainAdapter.getFilteredDomainData(), settings, getDimReductionEnabled());
         this.visualizationModel = new VisualizationModel(filteredDomainData, settings, getDimReductionEnabled());
 
         // decide whether filtered data is used for classification

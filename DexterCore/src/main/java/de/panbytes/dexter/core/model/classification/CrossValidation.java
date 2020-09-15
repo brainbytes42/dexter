@@ -103,7 +103,12 @@ public class CrossValidation extends ObservableTask<CrossValidation.CrossValidat
 
 
                                     } catch (Exception e) {
-                                        log.debug("CrossValidation: Exception while processing fold", e);
+                                        if(e instanceof InterruptedException){
+                                            log.debug("CrossValidation: Processing fold was interrupted (cancelled).");
+                                            log.trace("CrossValidation: Processing fold was interrupted.", e);
+                                        } else {
+                                            log.warn("CrossValidation: Exception while processing fold", e);
+                                        }
                                         classificationResult = Collections.emptyMap();
                                     }
 

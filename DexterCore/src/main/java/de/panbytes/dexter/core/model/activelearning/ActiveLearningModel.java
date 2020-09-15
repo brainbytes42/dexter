@@ -78,9 +78,9 @@ public class ActiveLearningModel {
                                                                                                                 .collect(
                                                                                                                         Collectors.toList()))
                                                                                                                    .orElse(Collections.emptyList()))
-                                                            .doOnNext(uncertainties -> log.debug(uncertainties.isEmpty()
+                                                            .doOnNext(uncertainties -> log.trace(uncertainties.isEmpty()
                                                                                                  ? "No uncertain classification results."
-                                                                                                 : "Uncertain classification results: " + uncertainties))
+                                                                                                 : "Most uncertain classification results: " + uncertainties.subList(0,Math.min(10,uncertainties.size()))))
                                                             .replay(1)
                                                             .autoConnect();
 
@@ -110,9 +110,9 @@ public class ActiveLearningModel {
                                                                                                                                                         .toList()))
                                                                                                      .orElse(Collections.emptyList());
                                                                   })
-                                                   .doOnNext(uncertainties -> log.debug(uncertainties.isEmpty()
+                                                   .doOnNext(uncertainties -> log.trace(uncertainties.isEmpty()
                                                                                         ? "No uncertain cross-validation results."
-                                                                                        : "Uncertain cross-validation results: " + uncertainties))
+                                                                                        : "Most uncertain cross-validation results: " + uncertainties.subList(0,Math.min(10,uncertainties.size()))))
                                                    .replay(1)
                                                    .refCount();
 

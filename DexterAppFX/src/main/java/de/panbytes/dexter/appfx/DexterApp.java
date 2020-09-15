@@ -113,7 +113,7 @@ public abstract class DexterApp extends Application {
     private Scene createSceneFromFxml(URL resource) throws IOException {
         // Setup the Main GUI FXML-Loader
         final FXMLLoader fxmlLoader = new FXMLLoader(resource);
-        log.debug("Allocate FXML at {} and setup an FXMLLoader ({}).", fxmlLoader.getLocation(),
+        log.trace("Allocate FXML at {} and setup an FXMLLoader ({}).", fxmlLoader.getLocation(),
             fxmlLoader);
 
         /*

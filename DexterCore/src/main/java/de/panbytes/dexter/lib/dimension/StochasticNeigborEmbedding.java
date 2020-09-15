@@ -48,7 +48,7 @@ public class StochasticNeigborEmbedding extends DimensionMapping {
     @Override
     protected AbstractMappingProcessor createMappingProcessor(double[][] inputMatrix, Context context) {
         return new BarnesHutTsneLibProcessor(inputMatrix, context);
-        //                return new SimpleTSneProcessor(inputMatrix, context);
+//                        return new SimpleTSneProcessor(inputMatrix, context);
     }
 
     public static class SimpleTSneContext extends Context {
@@ -227,7 +227,7 @@ public class StochasticNeigborEmbedding extends DimensionMapping {
                 boolean smile = true;
                 if (smile) {
                     TSNE tsne = new InitSmileTSNE(project, new PCA(project).setProjection(2).project(project), 2, targetPerplexity, 200, 1);
-                    int maxIter = 1500;
+                    int maxIter = 1000;
                     for (int iter = 0; iter < maxIter; iter++) {
                         intermediateResult = new double[tsne.getCoordinates().length][];
                         for (int i = 0; i < tsne.getCoordinates().length; i++) {

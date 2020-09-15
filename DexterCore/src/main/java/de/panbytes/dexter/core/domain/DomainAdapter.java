@@ -24,6 +24,7 @@ import io.reactivex.subjects.Subject;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -37,7 +38,7 @@ public abstract class DomainAdapter extends Named.BaseImpl implements Named {
 
     private final DataSourceActions dataSourceActions = new DataSourceActions();
     private final AppContext appContext;
-    private final RxField<Optional<FeatureSpace>> featureSpace;
+    private final RxField<Optional<FeatureSpace>> featureSpace = RxField.initiallyEmpty();
     private final Observable<Optional<DataSource>> rootDataSource;
     private final Observable<List<DomainDataEntity>> domainData;
 
@@ -52,19 +53,13 @@ public abstract class DomainAdapter extends Named.BaseImpl implements Named {
         /*
         Update rootDataSource for new FeatureSpaces (root is empty, if featurespace is empty!)
          */
-        this.featureSpace = RxField.initiallyEmpty();
         this.rootDataSource = this.featureSpace.toObservable()
+                                               .doOnNext(features->log.info("FeatureSpace: {}", features.map(Objects::toString).orElse("n/a")))
                                                .map(featureSpaceOptional -> featureSpaceOptional.map(
                                                        featureSpace -> new DataSource("Root", "", featureSpace)))
+                                               .doOnNext(root->log.trace("RootDataSource: {}", root.map(Objects::toString).orElse("n/a")))
                                                .replay(1)
                                                .autoConnect(0);
-
-        // logging...
-        this.disposable.addAll( //
-            this.featureSpace.toObservable().subscribe(featureSpace -> log.info("FeatureSpace: " + featureSpace)), //
-            this.rootDataSource.subscribe(dataSource -> log.info("RootDataSource: " + dataSource)) //
-        );
-
 
         /*
         Assemble filteredDomainData: ( getDataSet + updatingFiltersList ) <- domainDataFilterFunction
@@ -93,11 +88,12 @@ public abstract class DomainAdapter extends Named.BaseImpl implements Named {
                                                                                               status -> status == Status.ACTIVE)))
                                                                                       .orElse(Observable.just(Collections.emptyList())))
                                              .distinctUntilChanged()
-                                             .doOnNext(entities -> log.debug("DomainAdapter has {} DataEntities.", entities.size()))
+                                             .doOnNext(entities -> log.info("DomainAdapter provides {} DataEntities in total.", entities.size()))
                                              .replay(1)
                                              .refCount();
 
         // changed labels -> inspection history
+        // TODO move from library to entities?
         this.domainData.switchMap(entities -> Observable.fromIterable(entities)
                                                         .flatMap(entity -> entity.getClassLabel().toObservable().skip(1).map(__ -> entity)))
                        .subscribe(changedLabelEntity -> this.appContext.getInspectionHistory().markInspected(changedLabelEntity));
