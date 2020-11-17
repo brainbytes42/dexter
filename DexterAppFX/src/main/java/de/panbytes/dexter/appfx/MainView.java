@@ -19,6 +19,7 @@ import de.panbytes.dexter.core.domain.DataSourceActions;
 import de.panbytes.dexter.core.DexterCore;
 import de.panbytes.dexter.core.model.activelearning.ActiveLearningModel;
 import de.panbytes.dexter.core.model.activelearning.ActiveLearningModel.AbstractUncertainty;
+import de.panbytes.dexter.core.model.activelearning.ActiveLearningModel.ClassificationUncertainty;
 import de.panbytes.dexter.core.model.activelearning.ActiveLearningModel.CrossValidationUncertainty;
 import de.panbytes.dexter.core.data.DataEntity;
 import de.panbytes.dexter.core.data.DataSource;
@@ -104,6 +105,7 @@ public class MainView {
 
     public static final String EMPTY_CLASS_LABEL = "--";
     private static final Logger log = LoggerFactory.getLogger(MainView.class);
+    public static final int ACTIVE_LEARNING_BATCH_SIZE = 50;
 
 
     private final DexterCore dexterCore;
@@ -117,7 +119,11 @@ public class MainView {
     @FXML
     private Button pickUnlabeledButton;
     @FXML
-    private SplitMenuButton checkLabelButton;
+    private Button pickUnlabeledMultiButton;
+    @FXML
+    private Button checkLabelButton;
+    @FXML
+    private SplitMenuButton checkLabelMultiButton;
     @FXML
     private MenuItem clearCheckLabelHistoryMenuItem;
     @FXML
@@ -324,6 +330,9 @@ public class MainView {
         this.pickUnlabeledButton.disableProperty()
                                 .bind(JavaFxObserver.toBinding(
                                     this.dexterModel.getActiveLearningModel().getClassificationUncertainty().map(Collection::isEmpty)));
+        this.pickUnlabeledMultiButton.disableProperty()
+                                .bind(JavaFxObserver.toBinding(
+                                    this.dexterModel.getActiveLearningModel().getClassificationUncertainty().map(Collection::isEmpty)));
 
         JavaFxObservable.actionEventsOf(this.pickUnlabeledButton)
                         .switchMap(actionEvent -> this.dexterModel.getActiveLearningModel().getClassificationUncertainty().firstElement().toObservable())
@@ -334,6 +343,15 @@ public class MainView {
                         .map(Optional::get)
                         .map(ActiveLearningModel.AbstractUncertainty::getDataEntity)
                         .subscribe(leastConfident -> InspectionView.createAndShow(this.dexterCore, leastConfident));
+
+        JavaFxObservable.actionEventsOf(this.pickUnlabeledMultiButton)
+                        .switchMap(actionEvent -> this.dexterModel.getActiveLearningModel().getClassificationUncertainty().firstElement().toObservable())
+                        // TODO: isInspected() isn't used currently
+                        // .map(list->list.stream().filter(uncertainty->uncertainty.getDataEntity().isInspected().blockingFirst()).findFirst())
+                        .map(list->list.stream().filter(uncertainty->!this.dexterCore.getAppContext().getInspectionHistory().getLabeledEntities().blockingFirst().contains(uncertainty.getDataEntity())).limit(
+                            ACTIVE_LEARNING_BATCH_SIZE).sorted(Comparator.comparingDouble(
+                            ClassificationUncertainty::getUncertaintyValue)).map(ActiveLearningModel.AbstractUncertainty::getDataEntity).collect(Collectors.toList()))
+                        .subscribe(leastConfidents -> leastConfidents.forEach(leastConfident->InspectionView.createAndShow(this.dexterCore, leastConfident)));
 
 
         /*
@@ -347,6 +365,7 @@ public class MainView {
                                                                                            .collect(Collectors.toList())).publish();
 
         this.checkLabelButton.disableProperty().bind(JavaFxObserver.toBinding(uncheckedUncertainties.map(Collection::isEmpty)));
+        this.checkLabelMultiButton.disableProperty().bind(JavaFxObserver.toBinding(uncheckedUncertainties.map(Collection::isEmpty)));
 
         JavaFxObservable.actionEventsOf(this.checkLabelButton)
                         .withLatestFrom(uncheckedUncertainties, (actionEvent, crossValidationUncertainties) -> crossValidationUncertainties)
@@ -357,6 +376,14 @@ public class MainView {
                         .map(Optional::get)
                         .map(ActiveLearningModel.AbstractUncertainty::getDataEntity)
                         .subscribe(leastConfident -> InspectionView.createAndShow(this.dexterCore, leastConfident));
+
+        JavaFxObservable.actionEventsOf(this.checkLabelMultiButton)
+                        .withLatestFrom(uncheckedUncertainties, (actionEvent, crossValidationUncertainties) -> crossValidationUncertainties)
+                        // TODO: isInspected() isn't used currently
+                        // .map(list->list.stream().filter(uncertainty->uncertainty.getDataEntity().isInspected().blockingFirst()).findFirst())
+                        .map(list->list.stream().filter(uncertainty->!this.dexterCore.getAppContext().getInspectionHistory().getLabeledEntities().blockingFirst().contains(uncertainty.getDataEntity())).limit(
+                            ACTIVE_LEARNING_BATCH_SIZE).sorted(Comparator.comparingDouble(CrossValidationUncertainty::getUncertaintyValue)).map(ActiveLearningModel.AbstractUncertainty::getDataEntity).collect(Collectors.toList()))
+                        .subscribe(leastConfidents -> leastConfidents.stream().forEach(leastConfident -> InspectionView.createAndShow(this.dexterCore, leastConfident)));
 
         uncheckedUncertainties.connect();
 
