@@ -122,8 +122,11 @@ public class ModelExportPlugin extends DexterPlugin {
                                (existingLabelsUncertainties, classificationUncertainties) -> //
                                    Stream
                                        .concat(existingLabelsUncertainties.stream(), classificationUncertainties.stream())
-                                       .sorted(Comparator.comparing(AbstractUncertainty::getUncertaintyValue,
-                                                                    Comparator.reverseOrder())) // sorts concatenated stream!
+                                       .sorted(classChangedOnly ? // sorts concatenated stream!
+                                               // Exporting only changed entities -> sort by name... (uncertainty is changed by model-modifications!)
+                                               Comparator.comparing((AbstractUncertainty uncertainty) -> uncertainty.getDataEntity().getName().getValue()) :
+                                               //... but for full model, sort by uncertainty.
+                                               Comparator.comparing(AbstractUncertainty::getUncertaintyValue, Comparator.reverseOrder()))
                                        .map(uncertainty -> {
 
                                            final DataEntity dataEntity = uncertainty.getDataEntity();
