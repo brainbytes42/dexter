@@ -67,7 +67,7 @@ public class CrossValidation extends ObservableTask<CrossValidation.CrossValidat
     @Override
     protected CrossValidationResult runTask() throws Exception {
 
-        log.debug("Running CrossValidation {} times in {} folds for {} entities...", this.runs, this.folds, this.dataSet.size());
+        log.trace("Running CrossValidation {} times in {} folds for {} entities...", this.runs, this.folds, this.dataSet.size());
 
         final int totalWork = this.runs * this.folds;
         final AtomicInteger workDone = new AtomicInteger(0);

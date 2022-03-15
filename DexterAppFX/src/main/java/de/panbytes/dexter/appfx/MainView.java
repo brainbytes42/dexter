@@ -144,6 +144,8 @@ public class MainView {
     private TreeView<DataSource> dataSourceTree;
     @FXML
     private ToggleButton enableDimReductionButton;
+    @FXML
+    private ToggleButton enableModelUpdateButton;
     private Map<DataEntity, Data<Double, Double>> entity2chartData = new HashMap<>();
 
     /**
@@ -235,6 +237,7 @@ public class MainView {
         });
 
         JavaFxObservable.valuesOf(this.enableDimReductionButton.selectedProperty()).subscribe(this.dexterCore.getDexterModel().getDimReductionEnabled());
+        JavaFxObservable.valuesOf(this.enableModelUpdateButton.selectedProperty()).subscribe(this.dexterCore.getDexterModel().getModelUpdateEnabled());
 
 
         /*
@@ -321,18 +324,15 @@ public class MainView {
         });
 
 
-
-
-
         /*
         Active Learning: Pick Unlabeled
          */
         this.pickUnlabeledButton.disableProperty()
                                 .bind(JavaFxObserver.toBinding(
-                                    this.dexterModel.getActiveLearningModel().getClassificationUncertainty().map(Collection::isEmpty)));
+                                    this.dexterModel.getActiveLearningModel().getClassificationUncertainty().map(Collection::isEmpty).startWith(true)));
         this.pickUnlabeledMultiButton.disableProperty()
                                 .bind(JavaFxObserver.toBinding(
-                                    this.dexterModel.getActiveLearningModel().getClassificationUncertainty().map(Collection::isEmpty)));
+                                    this.dexterModel.getActiveLearningModel().getClassificationUncertainty().map(Collection::isEmpty).startWith(true)));
 
         JavaFxObservable.actionEventsOf(this.pickUnlabeledButton)
                         .switchMap(actionEvent -> this.dexterModel.getActiveLearningModel().getClassificationUncertainty().firstElement().toObservable())
@@ -345,6 +345,7 @@ public class MainView {
                         .subscribe(leastConfident -> InspectionView.createAndShow(this.dexterCore, leastConfident));
 
         JavaFxObservable.actionEventsOf(this.pickUnlabeledMultiButton)
+                        .throttleFirst(2,TimeUnit.SECONDS) // prevent double-click
                         .switchMap(actionEvent -> this.dexterModel.getActiveLearningModel().getClassificationUncertainty().firstElement().toObservable())
                         // TODO: isInspected() isn't used currently
                         // .map(list->list.stream().filter(uncertainty->uncertainty.getDataEntity().isInspected().blockingFirst()).findFirst())
@@ -364,8 +365,8 @@ public class MainView {
                                                                                                AbstractUncertainty::getDataEntity).negate())
                                                                                            .collect(Collectors.toList())).publish();
 
-        this.checkLabelButton.disableProperty().bind(JavaFxObserver.toBinding(uncheckedUncertainties.map(Collection::isEmpty)));
-        this.checkLabelMultiButton.disableProperty().bind(JavaFxObserver.toBinding(uncheckedUncertainties.map(Collection::isEmpty)));
+        this.checkLabelButton.disableProperty().bind(JavaFxObserver.toBinding(uncheckedUncertainties.map(Collection::isEmpty).startWith(true)));
+        this.checkLabelMultiButton.disableProperty().bind(JavaFxObserver.toBinding(uncheckedUncertainties.map(Collection::isEmpty).startWith(true)));
 
         JavaFxObservable.actionEventsOf(this.checkLabelButton)
                         .withLatestFrom(uncheckedUncertainties, (actionEvent, crossValidationUncertainties) -> crossValidationUncertainties)
@@ -378,6 +379,7 @@ public class MainView {
                         .subscribe(leastConfident -> InspectionView.createAndShow(this.dexterCore, leastConfident));
 
         JavaFxObservable.actionEventsOf(this.checkLabelMultiButton)
+                        .throttleFirst(2,TimeUnit.SECONDS) // prevent double-click
                         .withLatestFrom(uncheckedUncertainties, (actionEvent, crossValidationUncertainties) -> crossValidationUncertainties)
                         // TODO: isInspected() isn't used currently
                         // .map(list->list.stream().filter(uncertainty->uncertainty.getDataEntity().isInspected().blockingFirst()).findFirst())

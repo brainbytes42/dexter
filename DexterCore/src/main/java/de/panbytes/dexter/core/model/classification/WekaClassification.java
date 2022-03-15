@@ -69,6 +69,8 @@ public class WekaClassification extends Classifier.TrainingTask {
     @Override
     protected Classifier runTask() throws Exception {
 
+        log.trace("Building Classifier...");
+
         setMessage("Assemble training set...");
         final Instances trainingSet = buildTrainingSet(getTrainingSet(), getFeatureSpace());
 
@@ -98,6 +100,8 @@ public class WekaClassification extends Classifier.TrainingTask {
 
         @Override
         public Map<DataEntity, ClassificationResult> classify(Collection<DataEntity> dataEntities) {
+
+            log.trace("Classifying {} entities...", dataEntities.size());
 
             List<DataEntity> dataEntitiesList = new ArrayList<>(dataEntities); // need ordering
 

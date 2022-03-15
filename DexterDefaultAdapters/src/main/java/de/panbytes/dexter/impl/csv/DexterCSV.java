@@ -7,7 +7,7 @@ import de.panbytes.dexter.core.domain.DomainAdapter;
 public class DexterCSV extends DexterApp {
 
     @Override
-    protected String getDomainIdentifier() {
+    public String getDomainIdentifier() {
         return "DexterCSV";
     }
 

@@ -24,6 +24,7 @@
 	</root>
 
 	<logger name="de.panbytes.dexter" level="DEBUG" />
+<!--	<logger name="de.panbytes.dexter.ext.task" level="TRACE" />-->
 	<logger name="smile" level="INFO" />
 
 </configuration>

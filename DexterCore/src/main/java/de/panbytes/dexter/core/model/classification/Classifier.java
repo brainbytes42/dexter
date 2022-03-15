@@ -5,6 +5,8 @@ import de.panbytes.dexter.core.data.DataEntity;
 import de.panbytes.dexter.core.domain.FeatureSpace;
 import de.panbytes.dexter.ext.task.ObservableTask;
 import io.reactivex.Scheduler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.function.Function;
@@ -15,9 +17,12 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 public interface Classifier {
 
+    Logger log = LoggerFactory.getLogger(Classifier.class);
+
     ClassificationResult classify(DataEntity dataEntity);
 
     default Map<DataEntity, ClassificationResult> classify(Collection<DataEntity> dataEntities) {
+        log.debug("Classifying {} entities...", dataEntities.size());
         return dataEntities.parallelStream().collect(Collectors.toMap(Function.identity(), this::classify));
     }
 

@@ -26,6 +26,7 @@ public class DexterModel {
     private static final Logger log = LoggerFactory.getLogger(DexterModel.class);
 
     private final Subject<Boolean> dimReductionEnabled = BehaviorSubject.createDefault(true);
+    private final Subject<Boolean> modelUpdateEnabled = BehaviorSubject.createDefault(true);
 
     private final RxField<Optional<DataEntity>> currentInspectionEntity = RxField.initiallyEmpty();
 
@@ -60,13 +61,18 @@ public class DexterModel {
                                                                            .toObservable()
                                                                            .switchMap(filteredOnly -> filteredOnly ? filteredDomainData
                                                                                : domainAdapter.getDomainData());
-        this.classificationModel = new ClassificationModel(dataForClassification, appContext);
+        this.classificationModel = new ClassificationModel(dataForClassification, appContext, getModelUpdateEnabled());
         this.activeLearningModel = new ActiveLearningModel(this.classificationModel, appContext);
     }
 
     @Deprecated // TODO: pause cpu-intensive models by disposing (or switch-mapping)...?
     public Subject<Boolean> getDimReductionEnabled() {
         return dimReductionEnabled;
+    }
+
+    @Deprecated // TODO: pause cpu-intensive models by disposing (or switch-mapping)...?
+    public Subject<Boolean> getModelUpdateEnabled() {
+        return modelUpdateEnabled;
     }
 
     @Deprecated // TODO: multiple simultaneous inspections...?! => open inspection views...?

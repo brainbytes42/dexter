@@ -1,24 +1,20 @@
 package de.panbytes.dexter.core.model.classification;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
 import de.panbytes.dexter.core.context.AppContext;
 import de.panbytes.dexter.core.data.DataEntity;
 import de.panbytes.dexter.util.RxJavaUtils;
 import io.reactivex.Observable;
 import io.reactivex.Single;
-import io.reactivex.observables.ConnectableObservable;
 import io.reactivex.schedulers.Schedulers;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import weka.classifiers.trees.RandomForest;
+
+import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
+
+import static com.google.common.base.Preconditions.checkNotNull;
 
 public class ClassificationModel {
 
@@ -29,7 +25,7 @@ public class ClassificationModel {
     private final Observable<Optional<CrossValidation.CrossValidationResult>> crossValidationResults;
     private final Observable<? extends Collection<? extends DataEntity>> inputData;
 
-    public ClassificationModel(Observable<? extends Collection<? extends DataEntity>> inputData, AppContext appContext) {
+    public ClassificationModel(Observable<? extends Collection<? extends DataEntity>> inputData, AppContext appContext, Observable<Boolean> modelUpdateEnabled) {
 
         this.inputData = checkNotNull(inputData, "InputData may not be null!");
 
@@ -38,28 +34,27 @@ public class ClassificationModel {
 
         // trigger inputData for changed coordinates, even if data set stays the same!
         // publish to be used by both labeled and unlabeled data without doubling the work.
-        ConnectableObservable<? extends Collection<? extends DataEntity>> inputTriggeredOnChangedCoordinates = inputData
+        Observable<? extends Collection<? extends DataEntity>> inputTriggeredOnChangedCoordinates = inputData
             .observeOn(Schedulers.computation())
             .switchMap(entities -> RxJavaUtils.combineLatest(entities, DataEntity::coordinatesObs).map(__ -> entities).debounce(250, TimeUnit.MILLISECONDS))
-            .publish();
+            .replay(1).autoConnect();
 
-        ConnectableObservable<List<DataEntity>> labeledData = inputTriggeredOnChangedCoordinates
+        Observable<List<DataEntity>> labeledData = inputTriggeredOnChangedCoordinates
             .compose(RxJavaUtils.deepFilter(DataEntity::classLabelObs, Optional::isPresent))
             .debounce(250, TimeUnit.MILLISECONDS)
-            .publish();
+            .doOnNext(dataEntities -> log.debug("labeled dataEntities.size() = " + dataEntities.size())) // TODO remove
+            .replay(1).autoConnect();
 
-        ConnectableObservable<List<DataEntity>> unlabeledData = inputTriggeredOnChangedCoordinates
+        Observable<List<DataEntity>> unlabeledData = inputTriggeredOnChangedCoordinates
             .compose(RxJavaUtils.deepFilter(DataEntity::classLabelObs, label -> !label.isPresent()))
             .debounce(250, TimeUnit.MILLISECONDS)
-            .publish();
+            .doOnNext(dataEntities -> log.debug("unlabeled dataEntities.size() = " + dataEntities.size())) // TODO remove
+            .replay(1).autoConnect();
 
-        inputTriggeredOnChangedCoordinates.connect();
 
         // initialize the results
-        this.classificationResults = initClassificationResults(labeledData, unlabeledData);
-        this.crossValidationResults = initCrossValidationResults(labeledData);
-        labeledData.connect();
-        unlabeledData.connect();
+        this.classificationResults = initClassificationResults(labeledData, unlabeledData, modelUpdateEnabled);
+        this.crossValidationResults = initCrossValidationResults(labeledData, modelUpdateEnabled);
 
     }
 
@@ -71,46 +66,96 @@ public class ClassificationModel {
         return this.crossValidationResults;
     }
 
-    private Observable<Optional<CrossValidation.CrossValidationResult>> initCrossValidationResults(Observable<List<DataEntity>> labeledData) {
-        //        return this.settings.getClassificationOnFilteredData().toObservable().switchMap(filteredOnly -> {
-        //            if (filteredOnly) {
-        //                return this.domainAdapter.getFilteredDomainDataLabeled(labeled);
-        //            } else {
-        //                return this.domainAdapter.getDomainDataLabeled(labeled);
-        //            }
-        //        }).switchMap(entities -> // trigger for changed coordinates!
-        //                             entities.isEmpty()
-        //                             ? Observable.just(Collections.<DomainDataEntity>emptyList())
-        //                             : Observable.merge(
-        //                                     entities.stream().map(entity -> entity.getCoordinates().toObservable()).collect(Collectors.toList()))
-        //                                         .debounce(250, TimeUnit.MILLISECONDS)
-        //                                         .map(__ -> entities));
+    private Observable<Optional<CrossValidation.CrossValidationResult>> initCrossValidationResults(Observable<List<DataEntity>> labeledData, Observable<Boolean> updateEnabled) {
 
         final Observable<Integer> crossValidationRuns = appContext.getSettingsRegistry().getGeneralSettings().getCrossValidationRuns().toObservable();
         final Observable<Integer> crossValidationFolds = appContext.getSettingsRegistry().getGeneralSettings().getCrossValidationFolds().toObservable();
 
-        return Observable
-            .combineLatest(labeledData, crossValidationRuns, crossValidationFolds, (data, cvRuns, cvFolds) -> {
-                if (!data.isEmpty()) {
-                    try {
-                        final CrossValidation cv = new CrossValidation(Schedulers.computation(), data, data.get(0).getFeatureSpace(), WEKA_CLASSIFIER_SUPPLIER,
-                                                                       cvFolds, cvRuns);
-                        return Optional.of(cv);
-                    } catch (Exception e) {
-                        log.warn("Could not create CrossValidation!", e);
+
+        Observable<Optional<CrossValidation>> crossvalidation = Observable
+                .combineLatest(labeledData, crossValidationRuns, crossValidationFolds, (data, cvRuns, cvFolds) -> {
+                    if (!data.isEmpty()) {
+                        try {
+                            final CrossValidation cv = new CrossValidation(Schedulers.computation(), data, data.get(0).getFeatureSpace(), WEKA_CLASSIFIER_SUPPLIER,
+                                    cvFolds, cvRuns);
+                            return Optional.of(cv);
+                        } catch (Exception e) {
+                            log.warn("Could not create CrossValidation!", e);
+                        }
                     }
-                }
-                return Optional.<CrossValidation>empty();
-            })
-            .switchMapSingle(cvOpt -> cvOpt
-                .map(crossValidation -> crossValidation
-                    .result()
-                    .map(Optional::of)
-                    .doOnSubscribe(disposable -> this.appContext.getTaskMonitor().addTask(crossValidation)))
-                .orElse(Single.just(Optional.empty())))
-            .doOnNext(resultOpt->log.debug("CrossValidation Results: {}", resultOpt.map(result->String.format("%,d Entities mapped.",result.getClassificationResults().size())).orElse("n/a")))
-            .replay(1)
-            .autoConnect();
+                    return Optional.<CrossValidation>empty();
+                })
+                .debounce(__ -> updateEnabled.filter(Boolean::booleanValue));  // pause ("debounce") while updates are disabled
+
+        return crossvalidation.switchMapSingle(cvOpt ->
+                        cvOpt.map(cv -> cv
+                                        .result() // triggers processing
+                                        .doOnSubscribe(__ -> log.debug("Running CrossValidation..."))
+                                        .doOnSubscribe(__ -> this.appContext.getTaskMonitor().addTask(cv))
+                                        .map(Optional::of))
+                                .orElse(Single.just(Optional.empty()))
+                )
+                .doOnNext(resultOpt -> log.debug("CrossValidation Results: {}", resultOpt.map(
+                        result -> String.format("%,d Entities mapped.", result.getClassificationResults().size())).orElse("n/a")))
+                .onErrorReturn(throwable -> {
+                    log.warn("Error on CrossValidation!", throwable);
+                    return Optional.empty();
+                })
+                .replay(1)
+                .autoConnect();
+
+
+//        return crossvalidation
+//                .switchMap(cvOpt -> cvOpt
+//                        .map(crossValidation -> updateEnabled.distinctUntilChanged().switchMapMaybe(enabled -> { // do not update if disabled!
+//                            if (enabled) {
+//                                return crossValidation
+//                                        .result()
+//                                        .map(Optional::of)
+//                                        .doOnSubscribe(disposable -> this.appContext.getTaskMonitor().addTask(crossValidation))
+//                                        .toMaybe();
+//                            } else {
+//                                log.debug("Model-Update is disabled: Omit CrossValidation.");
+//                                return Maybe.empty();
+//                            }
+//                        }).distinctUntilChanged().replay(1).autoConnect(0))
+//                        .orElse(Observable.just(Optional.empty())))
+//                .doOnNext(resultOpt->log.debug("CrossValidation Results: {}", resultOpt.map(result->String.format("%,d Entities mapped.",result.getClassificationResults().size())).orElse("n/a")))
+//                .replay(1)
+//                .autoConnect();
+
+
+
+//        return Observable
+//            .combineLatest(labeledData, crossValidationRuns, crossValidationFolds, (data, cvRuns, cvFolds) -> {
+//                if (!data.isEmpty()) {
+//                    try {
+//                        final CrossValidation cv = new CrossValidation(Schedulers.computation(), data, data.get(0).getFeatureSpace(), WEKA_CLASSIFIER_SUPPLIER,
+//                                                                       cvFolds, cvRuns);
+//                        return Optional.of(cv);
+//                    } catch (Exception e) {
+//                        log.warn("Could not create CrossValidation!", e);
+//                    }
+//                }
+//                return Optional.<CrossValidation>empty();
+//            })
+//            .switchMap(cvOpt -> cvOpt
+//                .map(crossValidation -> updateEnabled.distinctUntilChanged().switchMapMaybe(enabled -> { // do not update if disabled!
+//                    if (enabled) {
+//                        return crossValidation
+//                                .result()
+//                                .map(Optional::of)
+//                                .doOnSubscribe(disposable -> this.appContext.getTaskMonitor().addTask(crossValidation))
+//                                .toMaybe();
+//                    } else {
+//                        log.debug("Model-Update is disabled: Omit CrossValidation.");
+//                        return Maybe.empty();
+//                    }
+//                }).distinctUntilChanged().replay(1).autoConnect(0))
+//                .orElse(Observable.just(Optional.empty())))
+//            .doOnNext(resultOpt->log.debug("CrossValidation Results: {}", resultOpt.map(result->String.format("%,d Entities mapped.",result.getClassificationResults().size())).orElse("n/a")))
+//            .replay(1)
+//            .autoConnect();
 
 
 //        return labeledData.switchMapSingle(labeledEntities -> {
@@ -133,59 +178,42 @@ public class ClassificationModel {
     }
 
     private Observable<Optional<Map<DataEntity, Classifier.ClassificationResult>>> initClassificationResults(Observable<List<DataEntity>> labeledData,
-        Observable<List<DataEntity>> unlabeledData) {
+                                                             Observable<List<DataEntity>> unlabeledData, Observable<Boolean> updateEnabled) {
 
-        //        return this.settings.getClassificationOnFilteredData().toObservable().switchMap(filteredOnly -> {
-        //            if (filteredOnly) {
-        //                return this.domainAdapter.getFilteredDomainDataLabeled(labeled);
-        //            } else {
-        //                return this.domainAdapter.getDomainDataLabeled(labeled);
-        //            }
-        //        }).switchMap(entities -> // trigger for changed coordinates!
-        //                             entities.isEmpty()
-        //                             ? Observable.just(Collections.<DomainDataEntity>emptyList())
-        //                             : Observable.merge(
-        //                                     entities.stream().map(entity -> entity.getCoordinates().toObservable()).collect(Collectors.toList()))
-        //                                         .debounce(250, TimeUnit.MILLISECONDS)
-        //                                         .map(__ -> entities));
-        final Observable<Optional<Single<Classifier>>> trainedClassifier = labeledData.map(labeledEntities -> {
-            if (labeledEntities.size() > 0) {
-                log.debug("Creating classifier for {} entities...", labeledEntities.size());
-                return Optional.of(new WekaClassification(Schedulers.computation(), new HashSet<>(labeledEntities), labeledEntities.get(0).getFeatureSpace(),
-                                                          WEKA_CLASSIFIER_SUPPLIER));
-            } else {
-                log.debug("No labeled entities available to train a classifier...");
-                return Optional.<WekaClassification>empty();
-            }
-        }).map(classifier -> classifier.map(wekaClassification -> {
-            return wekaClassification.result().doOnSubscribe(disposable -> this.appContext.getTaskMonitor().addTask(wekaClassification));
-        }));
+        Observable<Boolean> enabledAndNecessary = Observable.combineLatest(updateEnabled, unlabeledData, (enabled, unlabeled) -> enabled && !unlabeled.isEmpty()).replay(1).autoConnect();
 
-        //        return this.settings.getClassificationOnFilteredData().toObservable().switchMap(filteredOnly -> {
-        //            if (filteredOnly) {
-        //                return this.domainAdapter.getFilteredDomainDataLabeled(labeled);
-        //            } else {
-        //                return this.domainAdapter.getDomainDataLabeled(labeled);
-        //            }
-        //        }).switchMap(entities -> // trigger for changed coordinates!
-        //                             entities.isEmpty()
-        //                             ? Observable.just(Collections.<DomainDataEntity>emptyList())
-        //                             : Observable.merge(
-        //                                     entities.stream().map(entity -> entity.getCoordinates().toObservable()).collect(Collectors.toList()))
-        //                                         .debounce(250, TimeUnit.MILLISECONDS)
-        //                                         .map(__ -> entities));
+        Observable<Optional<Classifier>> trainedClassifier = labeledData.debounce(__ -> enabledAndNecessary.filter(Boolean::booleanValue).delay(250, TimeUnit.MILLISECONDS))  // pause ("debounce") while updates are disabled
+                .switchMapSingle(labeledEntities -> {
+                    if (!labeledEntities.isEmpty()) {
+                        log.debug("Preparing classifier for {} entities...", labeledEntities.size());
+                        WekaClassification classification = new WekaClassification(Schedulers.computation(), new HashSet<>(labeledEntities), labeledEntities.get(0).getFeatureSpace(), WEKA_CLASSIFIER_SUPPLIER);
+                        Single<Classifier> classifier = classification
+                                .result() // triggers training
+                                .doOnSubscribe(__ -> log.debug("Running Classification..."))
+                                .doOnSubscribe(__ -> this.appContext.getTaskMonitor().addTask(classification));
+                        return classifier.map(Optional::of);
+                    } else {
+                        log.debug("No labeled entities available to train a classifier...");
+                        return Single.just(Optional.<Classifier>empty());
+                    }
+                });
+
         return Observable.combineLatest(unlabeledData, trainedClassifier, (unlabeledEntities, classifierOpt) -> {
-            if (unlabeledEntities.size() > 0 && classifierOpt.isPresent()) {
-                log.debug("Classifying {} unlabeled entities...", unlabeledEntities.size());
-                return classifierOpt.get().map(classifier -> classifier.classify(new HashSet<>(unlabeledEntities))).map(Optional::of).toObservable();
-            } else {
-                return Observable.just(Optional.<Map<DataEntity, Classifier.ClassificationResult>>empty());
-            }
-        })
-                         .switchMap(obs -> obs)
-                         .doOnNext(results -> log.debug("Classification Results: {}",results.map(
-                             map -> String.format("%,d Entities mapped.", map.size())).orElse("n/a")))
-                         .replay(1).autoConnect();
+                    if (!unlabeledEntities.isEmpty()) {
+                        return classifierOpt.map(classifier -> {
+                            log.debug("Classifiying {} unlabeled entities...", unlabeledEntities.size());
+                            return classifier.classify(new HashSet<>(unlabeledEntities));
+                        });
+                    } else {
+                        return Optional.<Map<DataEntity, Classifier.ClassificationResult>>empty();
+                    }
+                }).doOnNext(results -> log.debug("Classification Results: {}", results.map(
+                        map -> String.format("%,d Entities mapped.", map.size())).orElse("n/a")))
+                .onErrorReturn(throwable -> {
+                    log.warn("Error on Classification!", throwable);
+                    return Optional.empty();
+                })
+                .replay(1).autoConnect();
 
     }
 

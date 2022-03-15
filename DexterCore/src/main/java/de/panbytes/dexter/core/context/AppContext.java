@@ -12,12 +12,15 @@ public class AppContext {
     private final PluginRegistry pluginRegistry;
     private final SettingsRegistry settingsRegistry;
     private final InspectionHistory inspectionHistory;
+    private final String domainIdentifier;
 
     public AppContext(GeneralSettings generalSettings, DomainSettings domainSettings) {
         this.taskMonitor = new TaskMonitor();
         this.pluginRegistry = new PluginRegistry();
         this.settingsRegistry = new SettingsRegistry(generalSettings, domainSettings);
         this.inspectionHistory = new InspectionHistory();
+
+        this.domainIdentifier = domainSettings.getDomainIdentifier();
 
         registerPluginsWithSettingsRegistry(this.pluginRegistry, this.settingsRegistry);
     }
@@ -46,4 +49,7 @@ public class AppContext {
         return this.inspectionHistory;
     }
 
+    public String getDomainIdentifier() {
+        return domainIdentifier;
+    }
 }

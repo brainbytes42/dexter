@@ -5,6 +5,7 @@ import io.reactivex.rxjavafx.observables.JavaFxObservable;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.SpinnerValueFactory;
 
@@ -18,6 +19,7 @@ public class DexterGeneralSettingsView {
     @FXML private Spinner<Double> perplexitySpinner;
     @FXML private Spinner<Integer> crossValidationRunsSpinner;
     @FXML private Spinner<Integer> crossValidationFoldsSpinner;
+    @FXML private ComboBox<GeneralSettings.ConfusionMatrixInspectionOrder> confusionMatrixInspectionOrder;
 
     public DexterGeneralSettingsView(GeneralSettings settings) {
         this.settings = settings;
@@ -42,6 +44,12 @@ public class DexterGeneralSettingsView {
         JavaFxObservable.valuesOf(crossValidationFoldsSpinner.valueProperty())
                         .debounce(500, TimeUnit.MILLISECONDS)
                         .subscribe(this.settings.getCrossValidationFolds()::setValue);
+
+        confusionMatrixInspectionOrder.getItems().setAll(GeneralSettings.ConfusionMatrixInspectionOrder.values());
+        confusionMatrixInspectionOrder.setValue(this.settings.getConfusionMatrixInspectionOrder().getValue());
+        JavaFxObservable.valuesOf(confusionMatrixInspectionOrder.valueProperty())
+                        .debounce(500, TimeUnit.MILLISECONDS)
+                        .subscribe(this.settings.getConfusionMatrixInspectionOrder()::setValue);
     }
 
     public Node createView() {

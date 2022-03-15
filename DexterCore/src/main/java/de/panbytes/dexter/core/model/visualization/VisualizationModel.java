@@ -110,6 +110,7 @@ public class VisualizationModel {
                                 emitter.onNext(Collections.emptyMap());
                             }
                         } else {
+                            log.debug("Updating Dim.Reduction is disabled.");
                             emitter.onNext(Collections.emptyMap());
                         }
                         emitter.onComplete();

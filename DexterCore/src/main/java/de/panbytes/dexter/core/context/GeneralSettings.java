@@ -15,6 +15,7 @@ public class GeneralSettings implements SettingsStorage {
     private final RxPreferenceBoolean classificationOnFilteredData;
     private final RxPreferenceInt crossValidationRuns;
     private final RxPreferenceInt crossValidationFolds;
+    private final RxPreference<ConfusionMatrixInspectionOrder> confusionMatrixInspectionOrder;
 
     private Supplier<Node> viewSupplier;
 
@@ -25,6 +26,10 @@ public class GeneralSettings implements SettingsStorage {
                                                                                .buildWithDefaultValue(true);
         this.crossValidationRuns = RxPreference.createForIdentifier(GeneralSettings.class,domainIdentifier,"crossValidationRuns").buildWithDefaultValue(3);
         this.crossValidationFolds = RxPreference.createForIdentifier(GeneralSettings.class,domainIdentifier,"crossValidationFolds").buildWithDefaultValue(10);
+        this.confusionMatrixInspectionOrder = RxPreference.<ConfusionMatrixInspectionOrder>createForIdentifier(GeneralSettings.class, domainIdentifier, "confusionMatrixInspectionOrder")
+                                                          .withDefaultValue(ConfusionMatrixInspectionOrder.MOST_UNCERTAIN_FIRST)
+                                                          .withMarshalling(Enum::name, ConfusionMatrixInspectionOrder::valueOf)
+                                                          .build();
     }
 
     @Override
@@ -52,4 +57,13 @@ public class GeneralSettings implements SettingsStorage {
     public RxPreferenceInt getCrossValidationFolds() {
         return crossValidationFolds;
     }
+
+    public RxPreference<ConfusionMatrixInspectionOrder> getConfusionMatrixInspectionOrder() {
+        return confusionMatrixInspectionOrder;
+    }
+
+    public enum ConfusionMatrixInspectionOrder{
+        MOST_UNCERTAIN_FIRST, LEAST_UNCERTAIN_FIRST
+    }
+
 }

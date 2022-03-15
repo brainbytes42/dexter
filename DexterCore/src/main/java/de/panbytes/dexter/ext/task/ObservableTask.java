@@ -10,6 +10,8 @@ import io.reactivex.Single;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.schedulers.Schedulers;
 import io.reactivex.subjects.PublishSubject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -20,6 +22,8 @@ import java.util.function.Supplier;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 public abstract class ObservableTask<V> extends Named.BaseImpl implements Named {
+
+    private static final Logger log = LoggerFactory.getLogger(ObservableTask.class);
 
     private final Observable<V> results;
     private final PublishSubject<V> partialResults = PublishSubject.create();
@@ -33,6 +37,8 @@ public abstract class ObservableTask<V> extends Named.BaseImpl implements Named 
 
     public ObservableTask(String name, String description, Scheduler scheduler) {
         super(name, description);
+
+        log.trace("Creating ObservableTask: {}", this);
 
         checkNotNull(scheduler, "Scheduler is null!");
 
@@ -63,6 +69,8 @@ public abstract class ObservableTask<V> extends Named.BaseImpl implements Named 
                         emitter.onNext(value.get());
                         emitter.onComplete();
 
+                        log.trace("Finished ObservableTask: {}", this);
+
                     } catch (Throwable t) {
                         // execution failed as of cancelling or failure
 
@@ -71,6 +79,8 @@ public abstract class ObservableTask<V> extends Named.BaseImpl implements Named 
                         } else {
                             this.state.setValue(State.FAILED);
                         }
+
+                        log.trace("ObservableTask {}: {}", state.getValue().toString(), this);
 
                         // remember the exception for later subscribers
                         exception.set(t);
@@ -89,6 +99,8 @@ public abstract class ObservableTask<V> extends Named.BaseImpl implements Named 
                         // computation was successful previously - just return the result
                         emitter.onNext(value.get());
                         emitter.onComplete();
+
+                        log.trace("ObservableTask has been finished already: {}", this);
 
                     } else {
 

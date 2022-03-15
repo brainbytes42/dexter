@@ -127,6 +127,8 @@ public class StochasticNeigborEmbedding extends DimensionMapping {
 
                     setMessage("running t-SNE...");
 
+                    log.debug("Running {} for {} data entities, reducing {} dims to 2 and using Perplexity {}.", tsne.getClass().getSimpleName(), X.length, initial_dims, context.perplexity);
+
                     TSneConfiguration config = TSneUtils.buildConfig(X, 2, initial_dims, context.perplexity, 1000, false, 0.5, false);
                     double[][] Y = tsne.tsne(config);
 

@@ -1,14 +1,12 @@
-/**
- *
- */
 package de.panbytes.dexter.appfx;
 
 import static com.google.common.base.Verify.verify;
 
+import com.google.common.base.Preconditions;
 import de.panbytes.dexter.appfx.misc.WindowSizePersistence;
 import de.panbytes.dexter.appfx.settings.DexterGeneralSettingsView;
-import de.panbytes.dexter.core.context.AppContext;
 import de.panbytes.dexter.core.DexterCore;
+import de.panbytes.dexter.core.context.AppContext;
 import de.panbytes.dexter.core.context.DomainSettings;
 import de.panbytes.dexter.core.context.GeneralSettings;
 import de.panbytes.dexter.core.domain.DomainAdapter;
@@ -18,23 +16,55 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import javafx.application.Application;
 import javafx.beans.property.DoubleProperty;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * @author Fabian Krippendorff
  */
-public abstract class DexterApp extends Application {
+public class DexterApp extends Application {
 
     private static final Logger log = LoggerFactory.getLogger(DexterApp.class);
 
     private DexterCore dexterCore;
     private MainView mainView;
+
+    private static final AtomicReference<DexterCore> dexterCoreAtomicReference = new AtomicReference<>();
+
+    public static <D extends DomainAdapter> void launchApp(@Nonnull DomainSettings domainSettings, @Nonnull Function<AppContext, D> domainAdapterFactory,
+        @Nullable Consumer<D> initCallback) {
+
+        Preconditions.checkNotNull(domainSettings, "DomainSettings may not be null!");
+        Preconditions.checkNotNull(domainAdapterFactory, "DomainAdapter-Factory may not be null!");
+
+        GeneralSettings generalSettings = createGeneralSettings(domainSettings.getDomainIdentifier());
+        AppContext appContext = new AppContext(generalSettings, domainSettings);
+
+        D domainAdapter = domainAdapterFactory.apply(appContext);
+
+        if (initCallback != null) {
+            initCallback.accept(domainAdapter);
+        }
+
+        DexterCore dexterCore = new DexterCore(domainAdapter, appContext);
+
+        boolean successful = DexterApp.dexterCoreAtomicReference.compareAndSet(null, dexterCore);
+        if (!successful) {
+            throw new IllegalStateException("DexterCore has already been set!");
+        }
+
+        launch();
+    }
 
 
     /*
@@ -43,34 +73,25 @@ public abstract class DexterApp extends Application {
      * @see javafx.application.Application#init()
      */
     @Override
-    public final void init() throws Exception {
+    public final void init() {
 
         /* NOT on JavaFX-Thread */
 
-        super.init();
-
-        AppContext appContext = new AppContext(createGeneralSettings(getDomainIdentifier()), createDomainSettings(getDomainIdentifier()));
-
-        this.dexterCore = new DexterCore(createDomainAdapter(appContext), appContext);
-
+        if (DexterApp.dexterCoreAtomicReference.get() == null) {
+            throw new java.lang.IllegalStateException("DexterCore has not yet been initialized! Use launchApp(.) to start the App.");
+        }
+        this.dexterCore = dexterCoreAtomicReference.get();
 
         log.debug("Application has been initialized.");
-
     }
 
-    private GeneralSettings createGeneralSettings(String domainIdentifier) {
+    private static GeneralSettings createGeneralSettings(String domainIdentifier) {
         GeneralSettings generalSettings = new GeneralSettings(domainIdentifier);
         generalSettings.setSettingsViewSupplier(
             new DexterGeneralSettingsView(generalSettings)::createView);
         return generalSettings;
     }
 
-    protected DomainSettings createDomainSettings(String domainIdentifier) {
-        return new DomainSettings(domainIdentifier);
-    }
-    public abstract String getDomainIdentifier();
-
-    protected abstract DomainAdapter createDomainAdapter(AppContext appContext);
 
     @Override
     public final void start(final Stage primaryStage) throws Exception {
@@ -97,11 +118,9 @@ public abstract class DexterApp extends Application {
         /* Remember Window-Size & -Position etc. */
         Map<String, DoubleProperty> propertiesMap = new HashMap<>();
         this.mainView.mainSplitPane.getDividers().stream().findFirst()
-            .ifPresent(divider -> {
-                propertiesMap.put("mainSplitPane", divider.positionProperty());
-            });
+            .ifPresent(divider -> propertiesMap.put("mainSplitPane", divider.positionProperty()));
         WindowSizePersistence.loadAndSaveOnClose(primaryStage,
-            DexterApp.class.getSimpleName() + "." + getDomainIdentifier(),propertiesMap);
+            DexterApp.class.getSimpleName() + "." + dexterCore.getAppContext().getDomainIdentifier(),propertiesMap);
 
 
 

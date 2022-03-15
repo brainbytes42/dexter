@@ -1,11 +1,11 @@
 package de.panbytes.dexter.appfx;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
 import com.google.common.collect.ArrayTable;
 import de.panbytes.dexter.appfx.misc.WindowSizePersistence;
-import de.panbytes.dexter.core.data.ClassLabel;
 import de.panbytes.dexter.core.DexterCore;
+import de.panbytes.dexter.core.context.GeneralSettings;
+import de.panbytes.dexter.core.data.ClassLabel;
+import de.panbytes.dexter.core.data.DataEntity;
 import de.panbytes.dexter.core.model.activelearning.ActiveLearningModel;
 import de.panbytes.dexter.core.model.classification.ModelEvaluation;
 import de.panbytes.dexter.util.RxJavaUtils;
@@ -16,16 +16,6 @@ import io.reactivex.rxjavafx.schedulers.JavaFxScheduler;
 import io.reactivex.schedulers.Schedulers;
 import io.reactivex.subjects.PublishSubject;
 import io.reactivex.subjects.Subject;
-import java.io.IOException;
-import java.text.Collator;
-import java.util.Comparator;
-import java.util.EventObject;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
@@ -33,8 +23,10 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
+import javafx.scene.Cursor;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -42,13 +34,22 @@ import javafx.scene.chart.BarChart;
 import javafx.scene.chart.CategoryAxis;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
-import javafx.scene.control.Label;
-import javafx.scene.control.Tooltip;
+import javafx.scene.control.*;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
 import javafx.util.converter.PercentageStringConverter;
+
+import java.io.IOException;
+import java.text.Collator;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+
+import static com.google.common.base.Preconditions.checkNotNull;
 
 public class ModelQualityView extends Application {
 
@@ -64,6 +65,8 @@ public class ModelQualityView extends Application {
     @FXML private BorderPane dataSetOverviewPane;
     @FXML private BorderPane modelEvaluationPane;
     @FXML private BorderPane uncertaintyPane;
+
+    private AtomicInteger confusionMatrixInspectionLastAmount = new AtomicInteger(10); // initial value chosen by gut feeling
 
     private ModelQualityView(Observable<Optional<ModelEvaluation>> modelEvaluation, DexterCore dexterCore) {
         this.modelEvaluation = checkNotNull(modelEvaluation);
@@ -512,7 +515,8 @@ public class ModelQualityView extends Application {
                 for (ClassLabel rowLabel : classLabels) {
                     for (ClassLabel colLabel : classLabels) {
 
-                        final Label label = new Label(String.format("%d", confusionMatrix.get(rowLabel, colLabel)));
+                        long cellValue = confusionMatrix.get(rowLabel, colLabel);
+                        final Label label = new Label(String.format("%d", cellValue));
 
                         final BorderPane cell = new BorderPane(label);
                         cell.getStyleClass().add("cell");
@@ -523,12 +527,43 @@ public class ModelQualityView extends Application {
                             cell.getStyleClass().add("highlighted");
                             rowHeaderMap.get(rowLabel).getStyleClass().add("highlighted");
                             colHeaderMap.get(colLabel).getStyleClass().add("highlighted");
+                            if(cellValue>0) cell.getScene().setCursor(Cursor.HAND);
                         });
                         cell.setOnMouseExited(event -> {
                             cell.getStyleClass().remove("highlighted");
                             rowHeaderMap.get(rowLabel).getStyleClass().remove("highlighted");
                             colHeaderMap.get(colLabel).getStyleClass().remove("highlighted");
+                            cell.getScene().setCursor(Cursor.DEFAULT);
                         });
+
+                        // make confusion table inspectable (show InspectionViews for respective entities)
+                        JavaFxObservable.eventsOf(cell, MouseEvent.MOUSE_CLICKED)
+                                .throttleFirst(2,TimeUnit.SECONDS) // prevent double-click
+                                .map(actionEvent -> modelEvaluation.getCrossValidationResult().getClassificationResults())
+                                .map(cvResults -> {
+                                    Comparator<DataEntity> comparator = Comparator.comparingDouble(dataEntity1 -> this.dexterCore.getDexterModel().getActiveLearningModel().getExistingLabelsUncertainty().blockingFirst().stream().filter(cvUncertainty -> cvUncertainty.getDataEntity().equals(dataEntity1)).findAny().map(ActiveLearningModel.CrossValidationUncertainty::getUncertaintyValue).orElse(1.0));
+                                    if (dexterCore.getAppContext().getSettingsRegistry().getGeneralSettings().getConfusionMatrixInspectionOrder().getValue() == GeneralSettings.ConfusionMatrixInspectionOrder.LEAST_UNCERTAIN_FIRST) {
+                                        comparator = comparator.reversed();
+                                    }
+                                    return cvResults.entries().stream().filter(cvEntry -> cvEntry.getKey().getClassLabel().getValue().map(isLabel -> isLabel.equals(rowLabel)).orElse(false)
+                                            && cvEntry.getValue().getMostProbableClassLabel().map(givenLabel -> givenLabel.equals(colLabel)).orElse(false)).map(Map.Entry::getKey)
+                                            .distinct()
+                                            .sorted(comparator)
+                                            .collect(Collectors.toList());
+                                })
+                                .map(cellEntities -> {
+                                    if(cellEntities.size()>10){ // threshold chosen by gut feeling
+                                        return inspectNumberOfEntitiesDialog(confusionMatrixInspectionLastAmount.get(), cellEntities.size(), dexterCore.getAppContext().getSettingsRegistry().getGeneralSettings().getConfusionMatrixInspectionOrder().getValue())
+                                                .showAndWait()
+                                                .map(number -> {
+                                                    confusionMatrixInspectionLastAmount.set(number);
+                                                    return cellEntities.subList(cellEntities.size() - number, cellEntities.size());
+                                                })
+                                                .orElse(Collections.emptyList());
+                                    }
+                                    return cellEntities;
+                                })
+                                .subscribe(cellEntities -> cellEntities.forEach(dataEntity -> InspectionView.createAndShow(this.dexterCore, dataEntity)));
 
                         gridPane.add(cell, classLabels.indexOf(colLabel) + 2, classLabels.indexOf(rowLabel) + 2);
                     }
@@ -655,5 +690,42 @@ public class ModelQualityView extends Application {
         primaryStage.setScene(scene);
         primaryStage.show();
     }
+
+
+    private Dialog<Integer> inspectNumberOfEntitiesDialog(int initialValue, int maxValue, GeneralSettings.ConfusionMatrixInspectionOrder inspectionOrder) {
+
+        initialValue = Math.min(initialValue, maxValue);
+
+        Dialog<Integer> dialog = new Dialog<>();
+
+        dialog.setTitle("Show InspectionViews");
+
+        Spinner<Integer> spinner = new Spinner<>(1, maxValue, initialValue);
+        spinner.setEditable(true);
+        spinner.addEventHandler(ActionEvent.ACTION, event -> dialog.setResult(spinner.getValue()));
+        spinner.focusedProperty().addListener((obs, wasFocused, isFocused) -> {
+            if (isFocused) {
+                Platform.runLater(spinner.getEditor()::selectAll);
+            }
+        });
+        Platform.runLater(spinner::requestFocus);
+        dialog.getDialogPane().setContent(spinner);
+
+        Label textLabel = new Label();
+        String inspectionOrderString = inspectionOrder == GeneralSettings.ConfusionMatrixInspectionOrder.MOST_UNCERTAIN_FIRST?"most uncertain":"least uncertain";
+        textLabel.textProperty()
+                .bind(spinner.valueProperty()
+                        .asString("Load %d "+inspectionOrderString+" of " + maxValue + " total entities."));
+        dialog.getDialogPane().setHeader(textLabel);
+
+
+        dialog.getDialogPane()
+                .getButtonTypes()
+                .addAll(ButtonType.OK, ButtonType.CANCEL);
+        dialog.setResultConverter(buttonType -> buttonType.equals(ButtonType.OK) ? spinner.getValue() : null);
+
+        return dialog;
+    }
+
 
 }
