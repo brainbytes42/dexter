@@ -97,6 +97,9 @@ public abstract class DomainAdapter extends Named.BaseImpl implements Named {
         this.domainData.switchMap(entities -> Observable.fromIterable(entities)
                                                         .flatMap(entity -> entity.getClassLabel().toObservable().skip(1).map(__ -> entity)))
                        .subscribe(changedLabelEntity -> this.appContext.getInspectionHistory().markInspected(changedLabelEntity));
+        this.domainData.switchMap(entities -> Observable.fromIterable(entities)
+                                                        .flatMap(entity -> entity.getStatus().skip(1).filter(status -> status==Status.REJECTED).map(__ -> entity)))
+                       .subscribe(rejectedEntity -> this.appContext.getInspectionHistory().markInspected(rejectedEntity));
 
     }
 

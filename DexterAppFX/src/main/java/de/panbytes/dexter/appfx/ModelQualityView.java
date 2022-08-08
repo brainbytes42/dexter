@@ -449,7 +449,7 @@ public class ModelQualityView extends Application {
     }
 
     private void initConfusionMatrixView() {
-        this.lifecycleDisposable.add(this.modelEvaluation.observeOn(Schedulers.computation()).subscribe(modelEvaluationOpt -> {
+        this.lifecycleDisposable.add(this.modelEvaluation.observeOn(Schedulers.io()).subscribe(modelEvaluationOpt -> {
 
             if (modelEvaluationOpt.isPresent()) {
 

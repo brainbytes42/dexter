@@ -84,6 +84,20 @@ public class DomainDataEntity extends DataEntity {
     }
 
     @Override
+    public boolean setStatus(Status newStatus) {
+        return setStatus(newStatus, false);
+    }
+
+    @Override
+    public boolean setStatus(Status newStatus, boolean overwriteProtected) {
+        Status old = getStatus().blockingFirst();
+        boolean result = super.setStatus(newStatus, overwriteProtected);
+        log.info("Set Status for '{}' ({}) to '{}' (was '{}' / is set: {} (protected: {})).", getName().getValue(), getGeneratingDataSource().getName().getValue(),
+                newStatus, old, result, overwriteProtected);
+        return result;
+    }
+
+    @Override
     public final Observable<Boolean> isInspected() {
         return inspected.toObservable();
     }

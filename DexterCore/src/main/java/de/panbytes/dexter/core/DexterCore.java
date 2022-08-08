@@ -49,7 +49,7 @@ public class DexterCore {
         domainAdapter.initDexterModel(this.dexterModel);
 
         // register export plugins
-        appContext.getPluginRegistry().add(new ModelExportPlugin(this.domainAdapter, this.dexterModel));
+        appContext.getPluginRegistry().add(new ModelExportPlugin(this.domainAdapter, this.dexterModel, this.appContext));
         appContext.getPluginRegistry().add(new DataExportPlugin(this.domainAdapter, this.dexterModel));
 
     }

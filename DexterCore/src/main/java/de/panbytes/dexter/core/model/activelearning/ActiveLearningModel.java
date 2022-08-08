@@ -190,7 +190,7 @@ public class ActiveLearningModel {
             map.putAll(first);
             map.putAll(second);
             return map;
-        }).distinctUntilChanged();
+        }).distinctUntilChanged().replay(1).autoConnect();
     }
 
     /**

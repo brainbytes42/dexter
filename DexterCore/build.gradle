@@ -7,7 +7,7 @@ dependencies {
 //	compile('com.jujutsu.tsne:tsne:1.0.1') { //mavenLocal!
 //		transitive = false // reference is fat-jar
 //	}
-    compile 'com.github.lejon:T-SNE-Java:v2.5.0'
+    compile 'com.github.lejon:T-SNE-Java:v2.6.3'
 
     compile 'org.apache.commons:commons-math3:3.+'
     compile 'org.apache.commons:commons-lang3:3.+'

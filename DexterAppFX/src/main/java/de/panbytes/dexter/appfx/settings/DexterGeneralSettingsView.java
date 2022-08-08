@@ -20,6 +20,7 @@ public class DexterGeneralSettingsView {
     @FXML private Spinner<Integer> crossValidationRunsSpinner;
     @FXML private Spinner<Integer> crossValidationFoldsSpinner;
     @FXML private ComboBox<GeneralSettings.ConfusionMatrixInspectionOrder> confusionMatrixInspectionOrder;
+    @FXML private Spinner<Integer> activeLearningBatchSizeSpinner;
 
     public DexterGeneralSettingsView(GeneralSettings settings) {
         this.settings = settings;
@@ -50,6 +51,13 @@ public class DexterGeneralSettingsView {
         JavaFxObservable.valuesOf(confusionMatrixInspectionOrder.valueProperty())
                         .debounce(500, TimeUnit.MILLISECONDS)
                         .subscribe(this.settings.getConfusionMatrixInspectionOrder()::setValue);
+
+        activeLearningBatchSizeSpinner.setValueFactory(
+                new SpinnerValueFactory.IntegerSpinnerValueFactory(1, Integer.MAX_VALUE, this.settings.getActiveLearningBatchSize().getValue()));
+        JavaFxObservable.valuesOf(activeLearningBatchSizeSpinner.valueProperty())
+                .debounce(500, TimeUnit.MILLISECONDS)
+                .subscribe(this.settings.getActiveLearningBatchSize()::setValue);
+
     }
 
     public Node createView() {

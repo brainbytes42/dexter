@@ -1,5 +1,6 @@
 package de.panbytes.dexter.appfx;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Streams;
 import com.ibm.icu.text.RuleBasedNumberFormat;
 import de.panbytes.dexter.appfx.misc.WindowSizePersistence;
@@ -16,17 +17,12 @@ import io.reactivex.disposables.Disposable;
 import io.reactivex.rxjavafx.observables.JavaFxObservable;
 import io.reactivex.rxjavafx.observers.JavaFxObserver;
 import io.reactivex.rxjavafx.schedulers.JavaFxScheduler;
+import io.reactivex.schedulers.Schedulers;
 import io.reactivex.subjects.PublishSubject;
 import io.reactivex.subjects.Subject;
 import java.io.IOException;
 import java.text.Format;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.EventObject;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Optional;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import javafx.application.Platform;
@@ -107,7 +103,7 @@ public class InspectionView {
     }
 
     public static InspectionView createAndShow(DexterCore dexterCore, DataEntity inspectionTarget) {
-        FXMLLoader fxmlLoader = new FXMLLoader(InspectionView.class.getResource("InspectionView.fxml"));
+        FXMLLoader fxmlLoader = new FXMLLoader(Preconditions.checkNotNull(InspectionView.class.getResource("InspectionView.fxml"), "fxml resource is null!"));
 
         InspectionView inspectionView = new InspectionView(dexterCore, inspectionTarget);
         fxmlLoader.setControllerFactory(__ -> inspectionView);
@@ -372,10 +368,13 @@ public class InspectionView {
         // Button: Confirm current Label
         //
         disposable = classLabelObs.map(opt -> "Confirm _current Label" + opt.map(lbl -> " [" + lbl.getLabel() + "]").orElse(""))
+                                  .observeOn(JavaFxScheduler.platform())
                                   .subscribe(text -> this.confirmLabelButton.setText(text));
         this.lifecycleDisposable.add(disposable);
 
-        disposable = classLabelObs.map(opt -> !opt.isPresent()).subscribe(disable -> this.confirmLabelButton.setDisable(disable));
+        disposable = classLabelObs.map(opt -> !opt.isPresent())
+                .observeOn(JavaFxScheduler.platform())
+                .subscribe(disable -> this.confirmLabelButton.setDisable(disable));
         this.lifecycleDisposable.add(disposable);
 
         disposable = JavaFxObservable.actionEventsOf(this.confirmLabelButton)
@@ -402,6 +401,7 @@ public class InspectionView {
         disposable = Observable.combineLatest(classLabelObs, suggestionObs, //
                                               (label, suggestion) -> !suggestion.isPresent() || suggestion.equals(label))
                                .observeOn(JavaFxScheduler.platform())
+                               .startWith(true)
                                .subscribe(disable -> this.useSuggestedLabelButton.setDisable(disable));
         this.lifecycleDisposable.add(disposable);
 

@@ -16,6 +16,7 @@ public class GeneralSettings implements SettingsStorage {
     private final RxPreferenceInt crossValidationRuns;
     private final RxPreferenceInt crossValidationFolds;
     private final RxPreference<ConfusionMatrixInspectionOrder> confusionMatrixInspectionOrder;
+    private final RxPreferenceInt activeLearningBatchSize;
 
     private Supplier<Node> viewSupplier;
 
@@ -24,12 +25,13 @@ public class GeneralSettings implements SettingsStorage {
         this.perplexity = RxPreference.createForIdentifier(GeneralSettings.class, domainIdentifier, "tsnePerplexity").buildWithDefaultValue(30.);
         this.classificationOnFilteredData = RxPreference.createForIdentifier(GeneralSettings.class, domainIdentifier, "classificationOnFilteredData")
                                                                                .buildWithDefaultValue(true);
-        this.crossValidationRuns = RxPreference.createForIdentifier(GeneralSettings.class,domainIdentifier,"crossValidationRuns").buildWithDefaultValue(3);
+        this.crossValidationRuns = RxPreference.createForIdentifier(GeneralSettings.class,domainIdentifier,"crossValidationRuns").buildWithDefaultValue(1);
         this.crossValidationFolds = RxPreference.createForIdentifier(GeneralSettings.class,domainIdentifier,"crossValidationFolds").buildWithDefaultValue(10);
         this.confusionMatrixInspectionOrder = RxPreference.<ConfusionMatrixInspectionOrder>createForIdentifier(GeneralSettings.class, domainIdentifier, "confusionMatrixInspectionOrder")
                                                           .withDefaultValue(ConfusionMatrixInspectionOrder.MOST_UNCERTAIN_FIRST)
                                                           .withMarshalling(Enum::name, ConfusionMatrixInspectionOrder::valueOf)
                                                           .build();
+        this.activeLearningBatchSize = RxPreference.createForIdentifier(GeneralSettings.class,domainIdentifier,"activeLearningBatchSize").buildWithDefaultValue(20);
     }
 
     @Override
@@ -60,6 +62,10 @@ public class GeneralSettings implements SettingsStorage {
 
     public RxPreference<ConfusionMatrixInspectionOrder> getConfusionMatrixInspectionOrder() {
         return confusionMatrixInspectionOrder;
+    }
+
+    public RxPreferenceInt getActiveLearningBatchSize() {
+        return activeLearningBatchSize;
     }
 
     public enum ConfusionMatrixInspectionOrder{

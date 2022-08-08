@@ -5,53 +5,36 @@
 package de.panbytes.dexter.appfx;
 
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
 import com.google.common.base.Predicates;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.Comparators;
 import com.google.common.collect.HashBiMap;
 import de.panbytes.dexter.appfx.scene.chart.InteractiveScatterChart;
 import de.panbytes.dexter.appfx.settings.SettingsView;
+import de.panbytes.dexter.core.DexterCore;
 import de.panbytes.dexter.core.context.AppContext;
 import de.panbytes.dexter.core.data.ClassLabel;
+import de.panbytes.dexter.core.data.DataEntity;
+import de.panbytes.dexter.core.data.DataNode;
+import de.panbytes.dexter.core.data.DataSource;
 import de.panbytes.dexter.core.domain.DataSourceActions;
-import de.panbytes.dexter.core.DexterCore;
+import de.panbytes.dexter.core.domain.DomainAdapter;
+import de.panbytes.dexter.core.model.DexterModel;
+import de.panbytes.dexter.core.model.FilterManager.FilterModule;
 import de.panbytes.dexter.core.model.activelearning.ActiveLearningModel;
 import de.panbytes.dexter.core.model.activelearning.ActiveLearningModel.AbstractUncertainty;
 import de.panbytes.dexter.core.model.activelearning.ActiveLearningModel.ClassificationUncertainty;
 import de.panbytes.dexter.core.model.activelearning.ActiveLearningModel.CrossValidationUncertainty;
-import de.panbytes.dexter.core.data.DataEntity;
-import de.panbytes.dexter.core.data.DataSource;
-import de.panbytes.dexter.core.domain.DomainAdapter;
-import de.panbytes.dexter.core.model.DexterModel;
-import de.panbytes.dexter.core.model.FilterManager.FilterModule;
 import de.panbytes.dexter.core.model.classification.ModelEvaluation;
 import de.panbytes.dexter.util.RxJavaUtils;
 import io.reactivex.Observable;
+import io.reactivex.Single;
 import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.observables.ConnectableObservable;
 import io.reactivex.rxjavafx.observables.JavaFxObservable;
 import io.reactivex.rxjavafx.observers.JavaFxObserver;
 import io.reactivex.rxjavafx.schedulers.JavaFxScheduler;
 import io.reactivex.schedulers.Schedulers;
-import java.io.IOException;
-import java.text.Collator;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -64,37 +47,24 @@ import javafx.scene.Scene;
 import javafx.scene.chart.ValueAxis;
 import javafx.scene.chart.XYChart.Data;
 import javafx.scene.chart.XYChart.Series;
-import javafx.scene.control.Alert;
+import javafx.scene.control.*;
 import javafx.scene.control.Alert.AlertType;
-import javafx.scene.control.Button;
-import javafx.scene.control.ButtonType;
-import javafx.scene.control.CheckBox;
-import javafx.scene.control.CheckBoxTreeItem;
-import javafx.scene.control.CustomMenuItem;
-import javafx.scene.control.Label;
-import javafx.scene.control.Menu;
-import javafx.scene.control.MenuBar;
-import javafx.scene.control.MenuItem;
-import javafx.scene.control.ProgressBar;
-import javafx.scene.control.SelectionMode;
-import javafx.scene.control.SplitMenuButton;
-import javafx.scene.control.SplitPane;
-import javafx.scene.control.TextField;
-import javafx.scene.control.ToggleButton;
-import javafx.scene.control.Tooltip;
-import javafx.scene.control.TreeItem;
-import javafx.scene.control.TreeView;
 import javafx.scene.control.cell.CheckBoxTreeCell;
 import javafx.scene.input.MouseEvent;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.FlowPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.StackPane;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.text.Collator;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
+
+import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * The Controller for the Main View, coupled with JavaFX's FXML-Layout.
@@ -105,7 +75,6 @@ public class MainView {
 
     public static final String EMPTY_CLASS_LABEL = "--";
     private static final Logger log = LoggerFactory.getLogger(MainView.class);
-    public static final int ACTIVE_LEARNING_BATCH_SIZE = 50;
 
 
     private final DexterCore dexterCore;
@@ -173,6 +142,14 @@ public class MainView {
         log.debug("Initialize {}", this);
 
 
+        this.appContext.getErrorHandler()
+                .observeOn(JavaFxScheduler.platform())
+                .subscribe(errorContext -> {
+                    Alert alert = new Alert(AlertType.WARNING, errorContext.getSource().getClass().getSimpleName() + ": " + errorContext.getError().getMessage() + "\n[See log for further details.]");
+                    alert.showAndWait();
+                });
+
+
         /* Progress Monitor*/
         initProgressMonitor();
 
@@ -208,9 +185,8 @@ public class MainView {
                 defaultActionOpt.get().getName().toObservable().subscribe(name -> this.addDataSourcesSplitMenuButton.setText(name));
                 defaultActionOpt.get().getDescription().toObservable().subscribe(descr -> this.addDataSourcesSplitMenuButton.setTooltip(new Tooltip(descr)));
                 JavaFxObservable.actionEventsOf(this.addDataSourcesSplitMenuButton)
-                                .observeOn(Schedulers.io())
-                                .map(
-                                    e -> defaultActionOpt.get().createAndAdd(new DataSourceActions.AddAction.ActionContext(this.addDataSourcesSplitMenuButton)))
+                        .flatMapSingle(__ -> Single.fromCallable(() -> defaultActionOpt.get().createAndAdd(new DataSourceActions.AddAction.ActionContext(this.addDataSourcesSplitMenuButton)))
+                                .subscribeOn(Schedulers.io()))
                                 .observeOn(JavaFxScheduler.platform())
                                 .subscribe(this::displayAddActionResultMessage);
             } else {
@@ -228,17 +204,23 @@ public class MainView {
                 label.tooltipProperty().bind(JavaFxObserver.toBinding(action.getDescription().toObservable().map(Tooltip::new)));
                 CustomMenuItem menuItem = new CustomMenuItem(label);
                 JavaFxObservable.actionEventsOf(menuItem)
-                                .observeOn(Schedulers.io())
-                                .map(e -> action.createAndAdd(new DataSourceActions.AddAction.ActionContext(menuItem)))
-                                .observeOn(JavaFxScheduler.platform())
-                                .subscribe(this::displayAddActionResultMessage);
+                        .flatMapSingle(__ -> Single.fromCallable(() -> action.createAndAdd(new DataSourceActions.AddAction.ActionContext(menuItem)))
+                                .subscribeOn(Schedulers.io()))
+                        .observeOn(JavaFxScheduler.platform())
+                        .subscribe(this::displayAddActionResultMessage);
                 this.addDataSourcesSplitMenuButton.getItems().add(menuItem);
             });
         });
 
         JavaFxObservable.valuesOf(this.enableDimReductionButton.selectedProperty()).subscribe(this.dexterCore.getDexterModel().getDimReductionEnabled());
-        JavaFxObservable.valuesOf(this.enableModelUpdateButton.selectedProperty()).subscribe(this.dexterCore.getDexterModel().getModelUpdateEnabled());
+        this.dexterCore.getDexterModel().getDimReductionEnabled().subscribeOn(JavaFxScheduler.platform()).subscribe(enabled -> {
+            this.enableDimReductionButton.setStyle("-fx-text-fill: "+(enabled?"DarkGreen":"DarkRed"));
+        });
 
+        JavaFxObservable.valuesOf(this.enableModelUpdateButton.selectedProperty()).subscribe(this.dexterCore.getDexterModel().getModelUpdateEnabled());
+        this.dexterCore.getDexterModel().getModelUpdateEnabled().subscribeOn(JavaFxScheduler.platform()).subscribe(enabled -> {
+            this.enableModelUpdateButton.setStyle("-fx-text-fill: "+(enabled?"DarkGreen":"DarkRed"));
+        });
 
         /*
         Plugin-Menu
@@ -281,7 +263,7 @@ public class MainView {
                              .map(__ -> HashBiMap.<Optional<ClassLabel>, CheckBox>create()) // checkbox-mapping: remember states; create new when root changes
                              .switchMap(checkBoxesForLabels -> //
                                  domainAdapter.getDomainData()
-                                              .observeOn(Schedulers.computation())
+                                              .observeOn(Schedulers.io())
                                               .switchMap(entities -> // set of current class labels from data entities
                                                   RxJavaUtils.combineLatest(entities, DataEntity::classLabelObs).map(HashSet::new).distinctUntilChanged())
                                               .map(currentLabels -> //
@@ -304,7 +286,7 @@ public class MainView {
                                               .compose(
                                                   // listen to check boxes selection and filter for selected checkboxes
                                                   RxJavaUtils.deepFilter(
-                                                      checkBox -> JavaFxObservable.valuesOf(checkBox.selectedProperty()).observeOn(Schedulers.computation())))
+                                                      checkBox -> JavaFxObservable.valuesOf(checkBox.selectedProperty()).observeOn(Schedulers.io())))
                                               .map(selectedCheckBoxes -> // map the currently selected checkboxes to their respective labels
                                                   selectedCheckBoxes.stream()
                                                                     .map(checkBox -> checkBoxesForLabels.inverse().get(checkBox))
@@ -333,6 +315,7 @@ public class MainView {
         this.pickUnlabeledMultiButton.disableProperty()
                                 .bind(JavaFxObserver.toBinding(
                                     this.dexterModel.getActiveLearningModel().getClassificationUncertainty().map(Collection::isEmpty).startWith(true)));
+        this.pickUnlabeledMultiButton.textProperty().bind(JavaFxObserver.toBinding(this.appContext.getSettingsRegistry().getGeneralSettings().getActiveLearningBatchSize().toObservable().observeOn(JavaFxScheduler.platform()).map(String::valueOf)));
 
         JavaFxObservable.actionEventsOf(this.pickUnlabeledButton)
                         .switchMap(actionEvent -> this.dexterModel.getActiveLearningModel().getClassificationUncertainty().firstElement().toObservable())
@@ -350,7 +333,7 @@ public class MainView {
                         // TODO: isInspected() isn't used currently
                         // .map(list->list.stream().filter(uncertainty->uncertainty.getDataEntity().isInspected().blockingFirst()).findFirst())
                         .map(list->list.stream().filter(uncertainty->!this.dexterCore.getAppContext().getInspectionHistory().getLabeledEntities().blockingFirst().contains(uncertainty.getDataEntity())).limit(
-                            ACTIVE_LEARNING_BATCH_SIZE).sorted(Comparator.comparingDouble(
+                                this.appContext.getSettingsRegistry().getGeneralSettings().getActiveLearningBatchSize().getValue()).sorted(Comparator.comparingDouble(
                             ClassificationUncertainty::getUncertaintyValue)).map(ActiveLearningModel.AbstractUncertainty::getDataEntity).collect(Collectors.toList()))
                         .subscribe(leastConfidents -> leastConfidents.forEach(leastConfident->InspectionView.createAndShow(this.dexterCore, leastConfident)));
 
@@ -363,10 +346,13 @@ public class MainView {
             (crossValidationUncertainties, checkedEntities) -> crossValidationUncertainties.stream()
                                                                                            .filter(Predicates.compose(checkedEntities::contains,
                                                                                                AbstractUncertainty::getDataEntity).negate())
-                                                                                           .collect(Collectors.toList())).publish();
+                                                                                           .collect(Collectors.toList()))
+                .compose(RxJavaUtils.deepFilter(crossValidationUncertainty -> crossValidationUncertainty.getDataEntity().getStatus(), status -> status == DataNode.Status.ACTIVE))
+                .publish();
 
         this.checkLabelButton.disableProperty().bind(JavaFxObserver.toBinding(uncheckedUncertainties.map(Collection::isEmpty).startWith(true)));
         this.checkLabelMultiButton.disableProperty().bind(JavaFxObserver.toBinding(uncheckedUncertainties.map(Collection::isEmpty).startWith(true)));
+        this.checkLabelMultiButton.textProperty().bind(JavaFxObserver.toBinding(this.appContext.getSettingsRegistry().getGeneralSettings().getActiveLearningBatchSize().toObservable().observeOn(JavaFxScheduler.platform()).map(String::valueOf)));
 
         JavaFxObservable.actionEventsOf(this.checkLabelButton)
                         .withLatestFrom(uncheckedUncertainties, (actionEvent, crossValidationUncertainties) -> crossValidationUncertainties)
@@ -384,7 +370,7 @@ public class MainView {
                         // TODO: isInspected() isn't used currently
                         // .map(list->list.stream().filter(uncertainty->uncertainty.getDataEntity().isInspected().blockingFirst()).findFirst())
                         .map(list->list.stream().filter(uncertainty->!this.dexterCore.getAppContext().getInspectionHistory().getLabeledEntities().blockingFirst().contains(uncertainty.getDataEntity())).limit(
-                            ACTIVE_LEARNING_BATCH_SIZE).sorted(Comparator.comparingDouble(CrossValidationUncertainty::getUncertaintyValue)).map(ActiveLearningModel.AbstractUncertainty::getDataEntity).collect(Collectors.toList()))
+                                this.appContext.getSettingsRegistry().getGeneralSettings().getActiveLearningBatchSize().getValue()).sorted(Comparator.comparingDouble(CrossValidationUncertainty::getUncertaintyValue)).map(ActiveLearningModel.AbstractUncertainty::getDataEntity).collect(Collectors.toList()))
                         .subscribe(leastConfidents -> leastConfidents.stream().forEach(leastConfident -> InspectionView.createAndShow(this.dexterCore, leastConfident)));
 
         uncheckedUncertainties.connect();
@@ -471,7 +457,7 @@ public class MainView {
         List<Optional<ClassLabel>> labelsHistory = new ArrayList<>();
         Observable<ObservableList<Series<Double, Double>>> chartDataObs = this.dexterModel.getVisualizationModel()
                                                                                           .getLowDimData()
-                                                                                          .observeOn(Schedulers.computation())
+                                                                                          .observeOn(Schedulers.io())
                                                                                           .sample(100, TimeUnit.MILLISECONDS, true)
                                                                                           .switchMap(entityMappingMap -> {
 
@@ -657,7 +643,11 @@ public class MainView {
                                                                                           })
                                                                                           .map(FXCollections::observableList)
                                                                                           .observeOn(JavaFxScheduler.platform());
-        this.scatterChart.dataProperty().bind(JavaFxObserver.toBinding(chartDataObs));
+//        this.scatterChart.dataProperty().bind(JavaFxObserver.toBinding(chartDataObs));
+        chartDataObs.subscribeOn(JavaFxScheduler.platform()).subscribe(seriesList -> {
+            this.scatterChart.getData().setAll(seriesList);
+        });
+
         this.scatterChart.setAnimated(false);
         this.scatterChart.setHorizontalZeroLineVisible(false);
         this.scatterChart.setVerticalZeroLineVisible(false);

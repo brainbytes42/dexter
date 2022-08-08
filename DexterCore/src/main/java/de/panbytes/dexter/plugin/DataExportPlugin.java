@@ -64,7 +64,7 @@ public class DataExportPlugin extends DexterPlugin {
             File file = fileChooser.showSaveDialog(source instanceof Node ? ((Node) source).getScene().getWindow() : null);
 
             if (file != null) {
-                Schedulers.computation().scheduleDirect(() -> writeDomainDataToCsv(file.toPath()));
+                Schedulers.io().scheduleDirect(() -> writeDomainDataToCsv(file.toPath()));
             }
 
         }

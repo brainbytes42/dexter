@@ -20,12 +20,15 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.beans.property.DoubleProperty;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
+import javafx.stage.WindowEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -122,7 +125,13 @@ public class DexterApp extends Application {
         WindowSizePersistence.loadAndSaveOnClose(primaryStage,
             DexterApp.class.getSimpleName() + "." + dexterCore.getAppContext().getDomainIdentifier(),propertiesMap);
 
-
+        /* Close App (including other windows) when main window is closed */
+        primaryStage.addEventHandler(WindowEvent.WINDOW_HIDDEN,
+                __ -> {
+                    log.info("Main Window closed - exit Application.");
+                    Platform.exit();
+                    System.exit(0);
+                });
 
         log.debug("Application is up and running.");
 

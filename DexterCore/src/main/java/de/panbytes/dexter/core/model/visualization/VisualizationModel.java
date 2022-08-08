@@ -1,12 +1,16 @@
 package de.panbytes.dexter.core.model.visualization;
 
+import com.google.common.collect.ImmutableMap;
+import de.panbytes.dexter.core.context.AppContext;
 import de.panbytes.dexter.core.context.GeneralSettings;
 import de.panbytes.dexter.core.data.DataEntity;
+import de.panbytes.dexter.core.data.DataNode;
 import de.panbytes.dexter.core.data.MappedDataEntity;
 import de.panbytes.dexter.core.domain.FeatureSpace;
 import de.panbytes.dexter.lib.dimension.DimensionMapping;
 import de.panbytes.dexter.lib.dimension.StochasticNeigborEmbedding;
 import de.panbytes.dexter.lib.util.reactivex.extensions.RxFieldReadOnly;
+import de.panbytes.dexter.util.RxJavaUtils;
 import io.reactivex.Observable;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -16,11 +20,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+
+import io.reactivex.schedulers.Schedulers;
 import org.apache.commons.math3.ml.distance.EuclideanDistance;
 import org.apache.commons.math3.random.GaussianRandomGenerator;
 import org.apache.commons.math3.random.JDKRandomGenerator;
@@ -32,15 +39,23 @@ public class VisualizationModel {
     private static final Logger log = LoggerFactory.getLogger(VisualizationModel.class);
 
     private final Observable<Map<DataEntity, MappedDataEntity>> lowDimData;
+    private final AppContext appContext;
 
-    public VisualizationModel(Observable<? extends Collection<? extends DataEntity>> domainData, GeneralSettings settings,
-        Observable<Boolean> dimReductionEnabled) {
+    public VisualizationModel(Observable<? extends Collection<? extends DataEntity>> domainData, AppContext appContext,
+                              Observable<Boolean> dimReductionEnabled) {
+        this.appContext = appContext;
+
+        GeneralSettings settings = appContext.getSettingsRegistry().getGeneralSettings();
 
         AtomicReference<Map<DataEntity, MappedDataEntity>> previousMappingReference = new AtomicReference<>();
 
         this.lowDimData = dimReductionEnabled.distinctUntilChanged().switchMap(enabled -> {
             if (enabled) {
-                return domainData.debounce(100, TimeUnit.MILLISECONDS).switchMap(domainDataEntities -> {
+                return domainData.debounce(100, TimeUnit.MILLISECONDS)
+                        .doOnNext(dataEntities -> log.debug("NEXT DD {}", dataEntities.size()))
+                        .switchMap(domainDataEntities -> {
+                    AtomicReference<DimensionMapping.MappingProcessor> mappingProcessor = new AtomicReference<>();
+                    // this Observable is for just *one* run and provides intermediate steps until the run finishes.
                     return Observable.<Map<DataEntity, MappedDataEntity>>create(emitter -> {
 
                         log.debug("DexterModel / DomainData: {}", domainDataEntities.size());
@@ -85,28 +100,28 @@ public class VisualizationModel {
                                 context.setInitialSolution(initialSolutionMatrix);
                                 context.setPerplexity(settings.getPerplexity().getValue());
 
-                                DimensionMapping.MappingProcessor mappingProcessor = new StochasticNeigborEmbedding().mapAsync(dataMatrix, context);
-                                System.out.println("MAPPING! @ " + Thread.currentThread()); //TODO remove
+                                mappingProcessor.set(new StochasticNeigborEmbedding().mapAsync(dataMatrix, context));
 
                                 FeatureSpace featureSpace = new FeatureSpace("2D-Mapping",
                                                                              Arrays.asList(new FeatureSpace.Feature("x1"),
                                         new FeatureSpace.Feature("x2")));
 
-                                Observable.<double[][]>create(listenerEmitter -> mappingProcessor.addIntermediateResultListener(
+                                Observable.<double[][]>create(listenerEmitter -> mappingProcessor.get().addIntermediateResultListener(
                                     (newIntermediateResult, source) -> listenerEmitter.onNext(newIntermediateResult))).forEachWhile(newIntermediateResult -> {
                                     emitter.onNext(IntStream.range(0, newIntermediateResult.length)
                                                             .mapToObj(i -> new MappedDataEntity(newIntermediateResult[i], featureSpace, allEntities.get(i)))
                                                             .collect(Collectors.toMap(MappedDataEntity::getMappedDataEntity, Function.identity())));
-                                    return !emitter.isDisposed() && !mappingProcessor.getCompletableFuture().isDone();
+                                    return !emitter.isDisposed() && !mappingProcessor.get().getCompletableFuture().isDone();
                                 });
 
-                                double[][] mappedCoordinates = mappingProcessor.getResult();
+                                double[][] mappedCoordinates = mappingProcessor.get().getResult();
 
                                 emitter.onNext(IntStream.range(0, mappedCoordinates.length)
                                                         .mapToObj(i -> new MappedDataEntity(mappedCoordinates[i], featureSpace, allEntities.get(i)))
                                                         .collect(Collectors.toMap(MappedDataEntity::getMappedDataEntity, Function.identity())));
                             } catch (Exception e) {
                                 log.warn("Could not map coordinates!", e);
+                                appContext.getErrorHandler().onNext(new AppContext.ErrorContext(this, e));
                                 emitter.onNext(Collections.emptyMap());
                             }
                         } else {
@@ -114,13 +129,18 @@ public class VisualizationModel {
                             emitter.onNext(Collections.emptyMap());
                         }
                         emitter.onComplete();
-                    });
+                    }).subscribeOn(Schedulers.io()).doOnDispose(() -> {
+                        log.debug("DISPOSE_single");
+                        Optional.ofNullable(mappingProcessor.get()).ifPresent(DimensionMapping.MappingProcessor::cancel);
+                    }).unsubscribeOn(Schedulers.io());
 
                 });
             } else {
                 return Observable.empty();
             }
-        }).distinctUntilChanged().doOnNext(previousMappingReference::set).replay(1).autoConnect(0);
+        }).distinctUntilChanged().doOnNext(previousMappingReference::set)
+                .map(Map::entrySet).compose(RxJavaUtils.deepFilter(dataEntityMappedDataEntityEntry -> dataEntityMappedDataEntityEntry.getKey().getStatus(), status -> status == DataNode.Status.ACTIVE)).map(entries -> (Map<DataEntity, MappedDataEntity>) ImmutableMap.<DataEntity, MappedDataEntity>ofEntries(entries.toArray(new Map.Entry[0])))
+                .replay(1).autoConnect(0);
 
     }
 

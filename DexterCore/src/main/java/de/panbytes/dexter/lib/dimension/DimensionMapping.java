@@ -1,5 +1,8 @@
 package de.panbytes.dexter.lib.dimension;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Collection;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -11,6 +14,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 public abstract class DimensionMapping {
 
+    private static final Logger log = LoggerFactory.getLogger(DimensionMapping.class);
 
     public final MappingProcessor map(double[][] inputMatrix, Context context) {
         return mapAsync(inputMatrix, context, Runnable::run);
@@ -54,6 +58,8 @@ public abstract class DimensionMapping {
         //        boolean cancel();
 
         void addIntermediateResultListener(IntermediateResultListener listener);
+
+        void cancel();
 
 
         class ProgressInfo {

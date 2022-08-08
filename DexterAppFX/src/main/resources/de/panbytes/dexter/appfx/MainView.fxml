@@ -6,7 +6,7 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.text.*?>
 
-<VBox prefHeight="750.0" prefWidth="1200.0" stylesheets="@ChartColorScheme120.css" xmlns="http://javafx.com/javafx/16" xmlns:fx="http://javafx.com/fxml/1" fx:controller="de.panbytes.dexter.appfx.MainView">
+<VBox prefHeight="750.0" prefWidth="1200.0" stylesheets="@ChartColorScheme120.css" xmlns="http://javafx.com/javafx/8.0.172-ea" xmlns:fx="http://javafx.com/fxml/1" fx:controller="de.panbytes.dexter.appfx.MainView">
   <children>
     <MenuBar fx:id="menuBar" VBox.vgrow="NEVER">
       <menus>

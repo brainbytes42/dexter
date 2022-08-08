@@ -47,17 +47,19 @@ public class DexterModel {
         checkNotNull(domainAdapter, "DomainAdapter may not be null!");
         checkNotNull(appContext, "AppContext may not be null!");
 
-        GeneralSettings settings = appContext.getSettingsRegistry().getGeneralSettings();
-
         // TODO work in progress
         this.filterManager = new FilterManager<>(domainAdapter.getDomainData());
         filteredDomainData = this.filterManager.getOutput().debounce(10, TimeUnit.MILLISECONDS);
-        filteredDomainData.subscribe(filterResults -> log.trace("FilterResults: " + filterResults));
 
-        this.visualizationModel = new VisualizationModel(filteredDomainData, settings, getDimReductionEnabled());
+        // TODO debug output
+        domainAdapter.getDomainData().subscribe(domainDataEntities -> log.debug("FilterInput (DomainData): {}", domainDataEntities.size()));
+        filteredDomainData.subscribe(filterResults -> log.debug("FilterResults: {}", filterResults.size()));
+
+        this.visualizationModel = new VisualizationModel(filteredDomainData, appContext, getDimReductionEnabled());
 
         // decide whether filtered data is used for classification
-        Observable<List<DomainDataEntity>> dataForClassification = settings.getClassificationOnFilteredData()
+        Observable<List<DomainDataEntity>> dataForClassification = appContext.getSettingsRegistry().getGeneralSettings()
+                                                                           .getClassificationOnFilteredData()
                                                                            .toObservable()
                                                                            .switchMap(filteredOnly -> filteredOnly ? filteredDomainData
                                                                                : domainAdapter.getDomainData());

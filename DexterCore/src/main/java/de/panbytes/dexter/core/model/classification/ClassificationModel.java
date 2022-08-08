@@ -35,19 +35,19 @@ public class ClassificationModel {
         // trigger inputData for changed coordinates, even if data set stays the same!
         // publish to be used by both labeled and unlabeled data without doubling the work.
         Observable<? extends Collection<? extends DataEntity>> inputTriggeredOnChangedCoordinates = inputData
-            .observeOn(Schedulers.computation())
+            .observeOn(Schedulers.io())
             .switchMap(entities -> RxJavaUtils.combineLatest(entities, DataEntity::coordinatesObs).map(__ -> entities).debounce(250, TimeUnit.MILLISECONDS))
             .replay(1).autoConnect();
 
         Observable<List<DataEntity>> labeledData = inputTriggeredOnChangedCoordinates
             .compose(RxJavaUtils.deepFilter(DataEntity::classLabelObs, Optional::isPresent))
-            .debounce(250, TimeUnit.MILLISECONDS)
+            .debounce(500, TimeUnit.MILLISECONDS)
             .doOnNext(dataEntities -> log.debug("labeled dataEntities.size() = " + dataEntities.size())) // TODO remove
             .replay(1).autoConnect();
 
         Observable<List<DataEntity>> unlabeledData = inputTriggeredOnChangedCoordinates
             .compose(RxJavaUtils.deepFilter(DataEntity::classLabelObs, label -> !label.isPresent()))
-            .debounce(250, TimeUnit.MILLISECONDS)
+            .debounce(500, TimeUnit.MILLISECONDS)
             .doOnNext(dataEntities -> log.debug("unlabeled dataEntities.size() = " + dataEntities.size())) // TODO remove
             .replay(1).autoConnect();
 
@@ -99,8 +99,10 @@ public class ClassificationModel {
                         result -> String.format("%,d Entities mapped.", result.getClassificationResults().size())).orElse("n/a")))
                 .onErrorReturn(throwable -> {
                     log.warn("Error on CrossValidation!", throwable);
+                    appContext.getErrorHandler().onNext(new AppContext.ErrorContext(this, throwable));
                     return Optional.empty();
                 })
+                .startWith(Optional.empty())
                 .replay(1)
                 .autoConnect();
 
@@ -211,8 +213,10 @@ public class ClassificationModel {
                         map -> String.format("%,d Entities mapped.", map.size())).orElse("n/a")))
                 .onErrorReturn(throwable -> {
                     log.warn("Error on Classification!", throwable);
+                    appContext.getErrorHandler().onNext(new AppContext.ErrorContext(this, throwable));
                     return Optional.empty();
                 })
+                .startWith(Optional.empty())
                 .replay(1).autoConnect();
 
     }

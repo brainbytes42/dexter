@@ -68,6 +68,7 @@ public class StochasticNeigborEmbedding extends DimensionMapping {
 
         private final double[][] inputMatrix;
         private final SimpleTSneContext context;
+        private TSne tsne;
 
         public BarnesHutTsneLibProcessor(double[][] inputMatrix, Context context) {
             super();
@@ -81,6 +82,12 @@ public class StochasticNeigborEmbedding extends DimensionMapping {
         }
 
         @Override
+        public void cancel() {
+            log.debug("Cancelling t-SNE...");
+            tsne.abort();
+        }
+
+        @Override
         protected double[][] process() {
 
             ObservableTask<double[][]> task = new ObservableTask<double[][]>("t-SNE", "Reducing dimensionality using t-SNE",
@@ -90,7 +97,6 @@ public class StochasticNeigborEmbedding extends DimensionMapping {
                 protected double[][] runTask() throws Exception {
                     int initial_dims = 30;
 
-                    TSne tsne;
                     boolean barnesHut = true;
                     if (barnesHut) {
                         boolean parallel = true;
@@ -132,7 +138,6 @@ public class StochasticNeigborEmbedding extends DimensionMapping {
                     TSneConfiguration config = TSneUtils.buildConfig(X, 2, initial_dims, context.perplexity, 1000, false, 0.5, false);
                     double[][] Y = tsne.tsne(config);
 
-
                     return Y;
                 }
             };
@@ -155,6 +160,7 @@ public class StochasticNeigborEmbedding extends DimensionMapping {
         // if perplexity > number of possible neighbors, binary search converges at number of possible neigbors.
         private double targetPerplexity = 20;// FastMath.min(20, dataSet.size() - 1);
         private double[][] initialSolution = null;
+        private TSNE tsne;
 
 
         SimpleTSneProcessor(double[][] inputMatrix, Context context) {
@@ -170,6 +176,11 @@ public class StochasticNeigborEmbedding extends DimensionMapping {
 
         // TODO ? log?
 
+
+        @Override
+        public void cancel() {
+            log.warn("Cancelling this implementation of t-SNE is not possible!");
+        }
 
         @Override
         protected double[][] process() {
@@ -228,7 +239,7 @@ public class StochasticNeigborEmbedding extends DimensionMapping {
                 System.out.println("dims: " + project[0].length);
                 boolean smile = true;
                 if (smile) {
-                    TSNE tsne = new InitSmileTSNE(project, new PCA(project).setProjection(2).project(project), 2, targetPerplexity, 200, 1);
+                    tsne = new InitSmileTSNE(project, new PCA(project).setProjection(2).project(project), 2, targetPerplexity, 200, 1);
                     int maxIter = 1000;
                     for (int iter = 0; iter < maxIter; iter++) {
                         intermediateResult = new double[tsne.getCoordinates().length][];

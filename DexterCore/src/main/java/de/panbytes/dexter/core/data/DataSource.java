@@ -85,7 +85,7 @@ public class DataSource extends DataNode {
                 .map(DataSource::getSubtreeDataEntities)
                 .collect(Collectors.toList());
 
-            Function<Object[], List<DomainDataEntity>> listMerger = arrayOfLists -> Arrays
+            Function<Object[], List<DomainDataEntity>> listMerger = arrayOfLists -> (List<DomainDataEntity>) Arrays
                 .stream(arrayOfLists)
                 .map(List.class::cast)
                 .flatMap(List::stream)
