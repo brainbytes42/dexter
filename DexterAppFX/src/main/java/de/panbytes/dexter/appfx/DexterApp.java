@@ -45,7 +45,7 @@ public class DexterApp extends Application {
     private static final AtomicReference<DexterCore> dexterCoreAtomicReference = new AtomicReference<>();
 
     public static <D extends DomainAdapter> void launchApp(@Nonnull DomainSettings domainSettings, @Nonnull Function<AppContext, D> domainAdapterFactory,
-        @Nullable Consumer<D> initCallback) {
+                                                                 @Nullable Consumer<DexterCore> initCallback) {
 
         Preconditions.checkNotNull(domainSettings, "DomainSettings may not be null!");
         Preconditions.checkNotNull(domainAdapterFactory, "DomainAdapter-Factory may not be null!");
@@ -55,11 +55,11 @@ public class DexterApp extends Application {
 
         D domainAdapter = domainAdapterFactory.apply(appContext);
 
-        if (initCallback != null) {
-            initCallback.accept(domainAdapter);
-        }
-
         DexterCore dexterCore = new DexterCore(domainAdapter, appContext);
+
+        if (initCallback != null) {
+            initCallback.accept(dexterCore);
+        }
 
         boolean successful = DexterApp.dexterCoreAtomicReference.compareAndSet(null, dexterCore);
         if (!successful) {

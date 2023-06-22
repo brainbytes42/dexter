@@ -4,6 +4,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import de.panbytes.dexter.core.context.AppContext;
 import de.panbytes.dexter.core.context.GeneralSettings;
+import de.panbytes.dexter.core.data.MappedDataEntity;
 import de.panbytes.dexter.core.model.activelearning.ActiveLearningModel;
 import de.panbytes.dexter.core.data.DataEntity;
 import de.panbytes.dexter.core.data.DomainDataEntity;
@@ -15,9 +16,13 @@ import de.panbytes.dexter.lib.util.reactivex.extensions.RxFieldReadOnly;
 import io.reactivex.Observable;
 import io.reactivex.subjects.BehaviorSubject;
 import io.reactivex.subjects.Subject;
+
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,6 +46,8 @@ public class DexterModel {
     }
 
     private final Observable<List<DomainDataEntity>> filteredDomainData;
+
+    private Subject<List<DomainDataEntity>> currentSelection = BehaviorSubject.createDefault(Collections.emptyList());
 
     public DexterModel(DomainAdapter domainAdapter, AppContext appContext) {
 
@@ -103,4 +110,19 @@ public class DexterModel {
         return filterManager;
     }
 
+    public Observable<List<DomainDataEntity>> getCurrentSelection() {
+        return this.currentSelection;
+    }
+
+    public void setCurrentSelection(List<DataEntity> selection){
+        List<DomainDataEntity> domainEntities = selection.stream().map(dataEntity -> {
+            DataEntity temp = dataEntity;
+            while (temp instanceof MappedDataEntity) {
+                temp = ((MappedDataEntity) temp).getMappedDataEntity();
+            }
+            return temp;
+        }).filter(DomainDataEntity.class::isInstance).map(dataEntity -> (DomainDataEntity) dataEntity).collect(Collectors.toList());
+
+        this.currentSelection.onNext(domainEntities);
+    }
 }

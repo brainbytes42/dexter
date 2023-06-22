@@ -13,10 +13,7 @@ import de.panbytes.dexter.appfx.scene.chart.InteractiveScatterChart;
 import de.panbytes.dexter.appfx.settings.SettingsView;
 import de.panbytes.dexter.core.DexterCore;
 import de.panbytes.dexter.core.context.AppContext;
-import de.panbytes.dexter.core.data.ClassLabel;
-import de.panbytes.dexter.core.data.DataEntity;
-import de.panbytes.dexter.core.data.DataNode;
-import de.panbytes.dexter.core.data.DataSource;
+import de.panbytes.dexter.core.data.*;
 import de.panbytes.dexter.core.domain.DataSourceActions;
 import de.panbytes.dexter.core.domain.DomainAdapter;
 import de.panbytes.dexter.core.model.DexterModel;
@@ -37,8 +34,10 @@ import io.reactivex.rxjavafx.schedulers.JavaFxScheduler;
 import io.reactivex.schedulers.Schedulers;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
+import javafx.event.EventType;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Pos;
@@ -62,6 +61,7 @@ import java.text.Collator;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -81,6 +81,14 @@ public class MainView {
     private final DexterModel dexterModel;
     private final DomainAdapter domainAdapter;
     private final AppContext appContext;
+    @FXML
+    private MenuButton lassoBatchLabelMenuButton;
+    @FXML
+    private CustomMenuItem lassoBatchLabelEnterNewLabelCustomMenuItem;
+    @FXML
+    private Button lassoBatchLabelEnterNewLabelCustomMenuItemOkButton;
+    @FXML
+    private TextField lassoBatchLabelEnterNewLabelCustomMenuItemTextField;
     @FXML
     SplitPane mainSplitPane;
     @FXML
@@ -115,7 +123,7 @@ public class MainView {
     private ToggleButton enableDimReductionButton;
     @FXML
     private ToggleButton enableModelUpdateButton;
-    private Map<DataEntity, Data<Double, Double>> entity2chartData = new HashMap<>();
+    private BiMap<DataEntity, Data<Double, Double>> entity2chartData = HashBiMap.create();
 
     /**
      * Setup the Main MainView.
@@ -304,6 +312,49 @@ public class MainView {
                                  .distinctUntilChanged();
             }
         });
+
+
+        //
+        // Batch-Label Menu-Button (Lasso)
+        //
+        this.dexterModel.getCurrentSelection().map(Collection::isEmpty)
+                .observeOn(JavaFxScheduler.platform()).subscribe(this.lassoBatchLabelMenuButton::setDisable);
+
+        this.dexterCore.getDomainAdapter().getAllClassLabels().map(TreeSet::new).map(classLabels -> {
+            Function<ClassLabel, MenuItem> label2MenuItem = classLabel -> {
+                MenuItem menuItem = new MenuItem(classLabel.getLabel());
+                JavaFxObservable.actionEventsOf(menuItem).switchMapSingle(__ -> this.dexterModel.getCurrentSelection().firstOrError())
+                        .observeOn(JavaFxScheduler.platform())
+                        .filter(selection -> new Alert(AlertType.CONFIRMATION, "Set Label '" + classLabel + "' for " + selection.size() + " selected Entities?", ButtonType.OK).showAndWait().filter(response -> response == ButtonType.OK).isPresent())
+                        .observeOn(Schedulers.io())
+                        .subscribe(selection -> selection.forEach(entity -> entity.setClassLabel(classLabel)));
+                return menuItem;
+            };
+            return classLabels.stream().map(label2MenuItem).collect(Collectors.toList());
+        }).observeOn(JavaFxScheduler.platform()).subscribe(menuItems -> {
+            this.lassoBatchLabelMenuButton.getItems().setAll(menuItems);
+
+            // DIRTY workaround for even DIRTIER JavaFX-Bug: entering custom label triggers Event in last "ordinary" MenuItem! (So workaround: give an additional MenuItem without associated Event...)
+            MenuItem menuItem = new MenuItem();
+            menuItem.setDisable(true);
+            this.lassoBatchLabelMenuButton.getItems().add(menuItem);
+
+            this.lassoBatchLabelMenuButton.getItems().add(new SeparatorMenuItem());
+            this.lassoBatchLabelMenuButton.getItems().add(this.lassoBatchLabelEnterNewLabelCustomMenuItem);
+        });
+
+        Observable.merge(JavaFxObservable.actionEventsOf(this.lassoBatchLabelEnterNewLabelCustomMenuItemTextField),
+                        JavaFxObservable.actionEventsOf(this.lassoBatchLabelEnterNewLabelCustomMenuItemOkButton))
+                .map(__ -> this.lassoBatchLabelEnterNewLabelCustomMenuItemTextField.getText())
+                .doOnNext(__ -> this.lassoBatchLabelEnterNewLabelCustomMenuItemTextField.clear())
+                .doOnNext(__ -> this.lassoBatchLabelMenuButton.hide())
+                .map(labelText -> labelText.isEmpty() ? Optional.<ClassLabel>empty() : Optional.of(ClassLabel.labelFor(labelText)))
+                .subscribe(newLabel -> this.dexterModel.getCurrentSelection().firstOrError()
+                        .observeOn(JavaFxScheduler.platform())
+                        .filter(selection -> new Alert(AlertType.CONFIRMATION, "Set Label '" + newLabel.map(ClassLabel::getLabel).orElse("<unlabeled>") + "' for " + selection.size() + " selected Entities?", ButtonType.OK).showAndWait().filter(response -> response == ButtonType.OK).isPresent())
+                        .observeOn(Schedulers.io())
+                        .subscribe(selection -> selection.forEach(entity -> entity.setClassLabel(newLabel.orElse(null)))));
+
 
 
         /*
@@ -665,6 +716,12 @@ public class MainView {
                                                             .map(Collections::singletonList)
                                                             .orElse(Collections.emptyList());
             this.scatterChart.setCurrentSelection(selection);
+        });
+
+        this.scatterChart.getCurrentSelectionUnmodifiable().addListener((ListChangeListener<? super Data<Double, Double>>) selectionChanged -> {
+            selectionChanged.next();
+            List<DataEntity> selectionList = selectionChanged.getList().stream().map(data -> entity2chartData.inverse().get(data)).collect(Collectors.toList());
+            this.dexterModel.setCurrentSelection(selectionList);
         });
     }
 
