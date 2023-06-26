@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import javafx.scene.Node;
 import org.slf4j.Logger;
@@ -109,6 +110,7 @@ public abstract class DomainAdapter extends Named.BaseImpl implements Named {
                                                                    .toObservable()
                                                                    .map(labelOpt -> labelOpt.isPresent() == labeled ? Optional.of(entity)
                                                                        : Optional.<DomainDataEntity>empty()))
+                          .debounce(100, TimeUnit.MILLISECONDS)
                           .map(entityOpt -> entityOpt.stream().filter(Optional::isPresent).map(Optional::get).collect(Collectors.toList()));
     }
 
@@ -161,8 +163,9 @@ public abstract class DomainAdapter extends Named.BaseImpl implements Named {
     public Observable<List<Optional<ClassLabel>>> getClassLabels() {
         return getRootDataSource().switchMap(dataSourceOpt -> dataSourceOpt.map(dataSource -> {
             return dataSource.getSubtreeDataEntities()
-                             .switchMap(entities -> RxJavaUtils.combineLatest(entities, e->e.getClassLabel().toObservable()).map(
-                                                                              optLabels -> optLabels.stream()
+                             .switchMap(entities -> RxJavaUtils.combineLatest(entities, e->e.getClassLabel().toObservable())
+                                                                         .debounce(100, TimeUnit.MILLISECONDS)
+                                                                         .map(optLabels -> optLabels.stream()
                                                                                                     .distinct()
                                                                                                     .sorted(Comparator.comparing(
                                                                                                             optional -> optional.map(

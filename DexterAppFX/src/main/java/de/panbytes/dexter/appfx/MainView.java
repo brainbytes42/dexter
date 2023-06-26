@@ -53,6 +53,7 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,7 +63,9 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -308,7 +311,7 @@ public class MainView {
             public Observable<Boolean> apply(DataEntity target) {
                 return Observable.combineLatest(target.classLabelObs(), enabledClassLabels, (targetLabel, enabledSet) -> enabledSet.contains(targetLabel))
                                  // debounce is necessary, especially if an existing entity gets a new label, as then both combine-inputs will fire.
-                                 .debounce(100, TimeUnit.MILLISECONDS) //
+                                 .debounce(250, TimeUnit.MILLISECONDS) //
                                  .distinctUntilChanged();
             }
         });
@@ -509,7 +512,7 @@ public class MainView {
         Observable<ObservableList<Series<Double, Double>>> chartDataObs = this.dexterModel.getVisualizationModel()
                                                                                           .getLowDimData()
                                                                                           .observeOn(Schedulers.io())
-                                                                                          .sample(100, TimeUnit.MILLISECONDS, true)
+                                                                                          .sample(200, TimeUnit.MILLISECONDS, true)
                                                                                           .switchMap(entityMappingMap -> {
 
                                                                                               if (entityMappingMap.size() == 0) {
@@ -527,7 +530,7 @@ public class MainView {
                                                                                                       .collect(Collectors.toList());
                                                                                                   return Observable.merge(
                                                                                                       labelObservables) // just another trigger for re-calculation
-                                                                                                                   .debounce(100, TimeUnit.MILLISECONDS)
+                                                                                                                   .debounce(200, TimeUnit.MILLISECONDS)
                                                                                                                    .doOnNext(__ -> innerDisposables.clear())
                                                                                                                    .map(__ -> entityMappingMap.entrySet()
                                                                                                                                               .stream()
@@ -573,7 +576,10 @@ public class MainView {
                                                                                                                                                                  .getValue()
                                                                                                                                                                  .forEach(
                                                                                                                                                                      entityMapping -> {
-                                                                                                                                                                         Data<Double, Double> dataItem = new Data<>();
+                                                                                                                                                                         double[] coords = entityMapping
+                                                                                                                                                                                 .getValue()
+                                                                                                                                                                                 .getCoordinates().getValue();
+                                                                                                                                                                         Data<Double, Double> dataItem = new Data<>(coords[0], coords[1]); // prevent race condition (added data without coordinates by subscription below.
                                                                                                                                                                          this.entity2chartData
                                                                                                                                                                              .put(
                                                                                                                                                                                  entityMapping

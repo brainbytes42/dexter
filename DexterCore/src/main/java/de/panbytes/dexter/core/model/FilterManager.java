@@ -1,21 +1,26 @@
 package de.panbytes.dexter.core.model;
 
+import com.google.common.collect.Iterables;
 import de.panbytes.dexter.lib.util.reactivex.extensions.RxField;
 import de.panbytes.dexter.lib.util.reactivex.extensions.RxFieldCollection;
 import de.panbytes.dexter.util.Named;
 import de.panbytes.dexter.util.RxJavaUtils;
 import io.reactivex.Observable;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import io.reactivex.schedulers.Schedulers;
+import org.apache.commons.collections4.CollectionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public final class FilterManager<T> {
 
+    private static final Logger log = LoggerFactory.getLogger(FilterManager.class);
     private final Observable<List<T>> output;
     private final RxFieldCollection<Set<FilterModule<? super T>>, FilterModule<? super T>> filterModules = RxFieldCollection.withInitialValue(
         Collections.emptySet(), HashSet::new);
@@ -25,7 +30,7 @@ public final class FilterManager<T> {
         // use only enabled filters
         Observable<Set<FilterModule<? super T>>> activeFilters = this.filterModules.toObservable()
                                                                                    .compose(RxJavaUtils.deepFilter(FilterModule::isEnabled, enabled -> enabled,
-                                                                                       Collectors.toSet()));
+                                                                                       Collectors.toSet())).debounce(250, TimeUnit.MILLISECONDS);
 
         output = Observable.switchOnNext(
             // - combine input-items and filters to an observable filtered result-list
@@ -33,10 +38,11 @@ public final class FilterManager<T> {
             Observable.combineLatest(input, activeFilters, (currentItems, currentFilters) -> {
 
                 // the filtered results (Observable<List<T>>) for current items and filters
-                return Observable.fromIterable(currentItems).flatMapSingle(item -> {
+                return Observable.fromIterable(currentItems).subscribeOn(Schedulers.io()).flatMapSingle(item -> {
 
                     // Observable for item-result from applying all filters (Optional.empty if rejected)
                     return Observable.fromIterable(currentFilters)
+                                     .subscribeOn(Schedulers.io())
                                      .map(filter -> filter.apply(item))
                                      .toList()
                                      .map(resultsForItem -> Observable.combineLatest(resultsForItem,
@@ -52,7 +58,13 @@ public final class FilterManager<T> {
 
                 });
 
-            })).distinctUntilChanged().replay(1).refCount();
+            })).debounce(500, TimeUnit.MILLISECONDS)
+                .distinctUntilChanged((ts1, ts2) -> {
+                    Collection<T> disjunction = CollectionUtils.disjunction(ts1, ts2);
+                    log.debug("FILTER: DISJUNCTION = {} ... {}", disjunction.size(), disjunction.stream().limit(10).collect(Collectors.toList()));
+                    return disjunction.isEmpty();
+                } /*to be order-invariant*/)
+                .replay(1).refCount();
 
     }
 

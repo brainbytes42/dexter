@@ -36,7 +36,8 @@ public class ClassificationModel {
         // publish to be used by both labeled and unlabeled data without doubling the work.
         Observable<? extends Collection<? extends DataEntity>> inputTriggeredOnChangedCoordinates = inputData
             .observeOn(Schedulers.io())
-            .switchMap(entities -> RxJavaUtils.combineLatest(entities, DataEntity::coordinatesObs).map(__ -> entities).debounce(250, TimeUnit.MILLISECONDS))
+            .switchMap(entities -> RxJavaUtils.combineLatest(entities, DataEntity::coordinatesObs).map(__ -> entities)
+            .debounce(500, TimeUnit.MILLISECONDS))
             .replay(1).autoConnect();
 
         Observable<List<DataEntity>> labeledData = inputTriggeredOnChangedCoordinates

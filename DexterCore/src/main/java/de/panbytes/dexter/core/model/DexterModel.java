@@ -56,7 +56,7 @@ public class DexterModel {
 
         // TODO work in progress
         this.filterManager = new FilterManager<>(domainAdapter.getDomainData());
-        filteredDomainData = this.filterManager.getOutput().debounce(10, TimeUnit.MILLISECONDS);
+        filteredDomainData = this.filterManager.getOutput().debounce(250, TimeUnit.MILLISECONDS);
 
         // TODO debug output
         domainAdapter.getDomainData().subscribe(domainDataEntities -> log.debug("FilterInput (DomainData): {}", domainDataEntities.size()));
