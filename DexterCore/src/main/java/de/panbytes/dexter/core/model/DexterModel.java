@@ -20,6 +20,7 @@ import io.reactivex.subjects.Subject;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -41,11 +42,11 @@ public class DexterModel {
 
     private final FilterManager<DomainDataEntity> filterManager;
 
-    public Observable<List<DomainDataEntity>> getFilteredDomainData() {
+    public Observable<Set<DomainDataEntity>> getFilteredDomainData() {
         return filteredDomainData;
     }
 
-    private final Observable<List<DomainDataEntity>> filteredDomainData;
+    private final Observable<Set<DomainDataEntity>> filteredDomainData;
 
     private Subject<List<DomainDataEntity>> currentSelection = BehaviorSubject.createDefault(Collections.emptyList());
 
@@ -65,10 +66,10 @@ public class DexterModel {
         this.visualizationModel = new VisualizationModel(filteredDomainData, appContext, getDimReductionEnabled());
 
         // decide whether filtered data is used for classification
-        Observable<List<DomainDataEntity>> dataForClassification = appContext.getSettingsRegistry().getGeneralSettings()
-                                                                           .getClassificationOnFilteredData()
-                                                                           .toObservable()
-                                                                           .switchMap(filteredOnly -> filteredOnly ? filteredDomainData
+        Observable<Set<DomainDataEntity>> dataForClassification = appContext.getSettingsRegistry().getGeneralSettings()
+                                                                            .getClassificationOnFilteredData()
+                                                                            .toObservable()
+                                                                            .switchMap(filteredOnly -> filteredOnly ? filteredDomainData
                                                                                : domainAdapter.getDomainData());
         this.classificationModel = new ClassificationModel(dataForClassification, appContext, getModelUpdateEnabled());
         this.activeLearningModel = new ActiveLearningModel(this.classificationModel, appContext);

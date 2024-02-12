@@ -7,7 +7,7 @@ import org.apache.commons.math3.linear.MatrixUtils;
 import org.apache.commons.math3.linear.RealMatrix;
 import org.apache.commons.math3.stat.StatUtils;
 import org.apache.commons.math3.stat.correlation.Covariance;
-import smile.projection.PCA;
+import smile.feature.extraction.PCA;
 
 import java.util.Arrays;
 import java.util.stream.Collectors;
@@ -38,13 +38,13 @@ public class PrincipalComponentAnalysis {
         }
 
 
-        PCA pca = new PCA(normalized.getData());
-        pca.setProjection(2);
-        double[][] project = pca.project(normalized.getData());
+        PCA pca = PCA.fit(normalized.getData());
+        pca = pca.getProjection(2);
+        double[][] project = pca.apply(normalized.getData());
         System.out.println("PCA:");
         System.out.println(Arrays.stream(project).map(Arrays::toString).collect(Collectors.joining(System.lineSeparator())));
         System.out.println("Eigenvectors sorted by Eigenvalues:");
-        System.out.println(pca.getLoadings());
+        System.out.println(pca.loadings());
         System.out.println("---------------------------");
 
 

@@ -12,7 +12,7 @@ import org.apache.commons.math3.random.GaussianRandomGenerator;
 import org.apache.commons.math3.random.JDKRandomGenerator;
 import org.apache.commons.math3.random.NormalizedRandomGenerator;
 import org.apache.commons.math3.util.FastMath;
-import smile.projection.PCA;
+import smile.feature.extraction.PCA;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -41,11 +41,11 @@ public class SimpleTSne {
 
         // TODO: PCA
         System.out.println("PCA-DIM_input: "+inputMatrix[0].length);
-        PCA pca = new PCA(normalizedInput.getData());
-        System.out.println("PCA: " + Arrays.toString(pca.getVarianceProportion()));
-        pca.setProjection(2);
-        System.out.println("PCA: " + Arrays.toString(pca.getVarianceProportion()));
-        double[][] pcaResults = pca.project(normalizedInput.getData());
+        PCA pca = PCA.fit(normalizedInput.getData());
+        System.out.println("PCA: " + Arrays.toString(pca.varianceProportion()));
+        pca = pca.getProjection(2);
+        System.out.println("PCA: " + Arrays.toString(pca.varianceProportion()));
+        double[][] pcaResults = pca.apply(normalizedInput.getData());
         System.out.println("PCA-DIM_output: "+pcaResults[0].length);
 
         // affinities (probability-matrix)

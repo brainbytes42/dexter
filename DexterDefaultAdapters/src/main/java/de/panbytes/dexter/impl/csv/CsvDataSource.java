@@ -38,9 +38,10 @@ class CsvDataSource extends FileDataSource {
 
 
         setGeneratedDataEntities(data.parallelStream().map(builder -> {
-            final DomainDataEntity dataEntity = new DomainDataEntity(builder.id, path.toString(), builder.coordinates, featureSpace, this);
-            if (builder.label != null && !builder.label.isEmpty()) dataEntity.setClassLabel(ClassLabel.labelFor(builder.label));
-            return dataEntity;
+            ClassLabel lbl = (builder.label != null && !builder.label.isEmpty())
+                    ? ClassLabel.labelFor(builder.label)
+                    : null;
+            return new DomainDataEntity(builder.id, path.toString(), builder.coordinates, featureSpace, this, lbl);
         }).collect(Collectors.toList()));
 
 
@@ -72,7 +73,7 @@ class CsvDataSource extends FileDataSource {
 
             List<FeatureSpace.Feature> features = header.subList(2, header.size())
                                                         .stream()
-                                                        .map(s -> new FeatureSpace.Feature(s))
+                                                        .map(FeatureSpace.Feature::new)
                                                         .collect(Collectors.toList());
             domainAdapter.setFeatureSpace(
                     domainAdapter.getFeatureSpace().getValue().orElseGet(() -> new FeatureSpace("CSV", features)));
@@ -85,7 +86,6 @@ class CsvDataSource extends FileDataSource {
             final List<String> featureSpaceFeatures = featureSpace.getFeatures()
                                                                   .parallelStream()
                                                                   .map(FeatureSpace.Feature::getName)
-                                                                  .map(RxFieldReadOnly::getValue)
                                                                   .collect(Collectors.toList());
             Preconditions.checkState(featureSpaceFeatures.equals(header.subList(2, header.size())),
                                      "FeatureSpace does not match File's Header.");

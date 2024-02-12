@@ -1,17 +1,25 @@
 package de.panbytes.dexter.core.model.classification;
 
+import com.google.common.base.Predicates;
+import com.google.common.collect.Collections2;
+import com.google.common.collect.Lists;
 import de.panbytes.dexter.core.context.AppContext;
+import de.panbytes.dexter.core.data.ClassLabel;
 import de.panbytes.dexter.core.data.DataEntity;
 import de.panbytes.dexter.util.RxJavaUtils;
 import io.reactivex.Observable;
+import io.reactivex.ObservableTransformer;
 import io.reactivex.Single;
 import io.reactivex.schedulers.Schedulers;
+import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import weka.classifiers.trees.RandomForest;
 
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -23,35 +31,40 @@ public class ClassificationModel {
     private final AppContext appContext;
     private final Observable<Optional<Map<DataEntity, Classifier.ClassificationResult>>> classificationResults;
     private final Observable<Optional<CrossValidation.CrossValidationResult>> crossValidationResults;
-    private final Observable<? extends Collection<? extends DataEntity>> inputData;
+    private final Observable<? extends Set<? extends DataEntity>> inputData;
 
-    public ClassificationModel(Observable<? extends Collection<? extends DataEntity>> inputData, AppContext appContext, Observable<Boolean> modelUpdateEnabled) {
+    public ClassificationModel(Observable<? extends Set<? extends DataEntity>> inputData, AppContext appContext, Observable<Boolean> modelUpdateEnabled) {
 
         this.inputData = checkNotNull(inputData, "InputData may not be null!");
 
         // store the context-reference
         this.appContext = checkNotNull(appContext, "AppContext may not be null!");
 
-        // trigger inputData for changed coordinates, even if data set stays the same!
-        // publish to be used by both labeled and unlabeled data without doubling the work.
-        Observable<? extends Collection<? extends DataEntity>> inputTriggeredOnChangedCoordinates = inputData
-            .observeOn(Schedulers.io())
-            .switchMap(entities -> RxJavaUtils.combineLatest(entities, DataEntity::coordinatesObs).map(__ -> entities)
-            .debounce(500, TimeUnit.MILLISECONDS))
-            .replay(1).autoConnect();
+        // filter entities based on class label (e.g. has class label <=> Optional::isPresent)
+        Function<Predicate<Optional<ClassLabel>>,
+                ObservableTransformer<Set<? extends DataEntity>, Set<DataEntity>>> labelFilterTrafo =
+                labelFilterPredicate ->
+                        upstream -> upstream.compose(RxJavaUtils.deepFilter(DataEntity::classLabelObs, labelFilterPredicate))
+                                            .debounce(250, TimeUnit.MILLISECONDS)
+                                            .distinctUntilChanged();
 
-        Observable<List<DataEntity>> labeledData = inputTriggeredOnChangedCoordinates
-            .compose(RxJavaUtils.deepFilter(DataEntity::classLabelObs, Optional::isPresent))
-            .debounce(500, TimeUnit.MILLISECONDS)
-            .doOnNext(dataEntities -> log.debug("labeled dataEntities.size() = " + dataEntities.size())) // TODO remove
-            .replay(1).autoConnect();
+        // trigger update if coordinates changed, even if dataset remained the same
+        ObservableTransformer<Set<DataEntity>, Set<DataEntity>> triggerCoordinatesChanges =
+                upstream -> upstream.switchMap(entities -> RxJavaUtils.combineLatest(entities, DataEntity::coordinatesObs)
+                                                                      .map(__ -> entities)
+                                                                      .debounce(250, TimeUnit.MILLISECONDS));
 
-        Observable<List<DataEntity>> unlabeledData = inputTriggeredOnChangedCoordinates
-            .compose(RxJavaUtils.deepFilter(DataEntity::classLabelObs, label -> !label.isPresent()))
-            .debounce(500, TimeUnit.MILLISECONDS)
-            .doOnNext(dataEntities -> log.debug("unlabeled dataEntities.size() = " + dataEntities.size())) // TODO remove
-            .replay(1).autoConnect();
-
+        // compose transformers to get labeled and unlabeled data
+        Observable<Set<DataEntity>> labeledData = inputData.observeOn(Schedulers.io())
+                                                           .compose(labelFilterTrafo.apply(Optional::isPresent))
+                                                           .compose(triggerCoordinatesChanges)
+                                                           .doOnNext(labeledEntities -> log.trace("ClassificationModel has {} labeled entities available.", labeledEntities.size()))
+                                                           .replay(1).autoConnect();
+        Observable<Set<DataEntity>> unlabeledData = inputData.observeOn(Schedulers.io())
+                                                             .compose(labelFilterTrafo.apply(Predicates.not(Optional::isPresent)))
+                                                             .compose(triggerCoordinatesChanges)
+                                                             .doOnNext(unlabeledEntities -> log.trace("ClassificationModel has {} unlabeled entities available.", unlabeledEntities.size()))
+                                                             .replay(1).autoConnect();
 
         // initialize the results
         this.classificationResults = initClassificationResults(labeledData, unlabeledData, modelUpdateEnabled);
@@ -67,7 +80,7 @@ public class ClassificationModel {
         return this.crossValidationResults;
     }
 
-    private Observable<Optional<CrossValidation.CrossValidationResult>> initCrossValidationResults(Observable<List<DataEntity>> labeledData, Observable<Boolean> updateEnabled) {
+    private Observable<Optional<CrossValidation.CrossValidationResult>> initCrossValidationResults(Observable<Set<DataEntity>> labeledData, Observable<Boolean> updateEnabled) {
 
         final Observable<Integer> crossValidationRuns = appContext.getSettingsRegistry().getGeneralSettings().getCrossValidationRuns().toObservable();
         final Observable<Integer> crossValidationFolds = appContext.getSettingsRegistry().getGeneralSettings().getCrossValidationFolds().toObservable();
@@ -77,7 +90,7 @@ public class ClassificationModel {
                 .combineLatest(labeledData, crossValidationRuns, crossValidationFolds, (data, cvRuns, cvFolds) -> {
                     if (!data.isEmpty()) {
                         try {
-                            final CrossValidation cv = new CrossValidation(Schedulers.computation(), data, data.get(0).getFeatureSpace(), WEKA_CLASSIFIER_SUPPLIER,
+                            final CrossValidation cv = new CrossValidation(Schedulers.computation(), data, data.iterator().next().getFeatureSpace(), WEKA_CLASSIFIER_SUPPLIER,
                                     cvFolds, cvRuns);
                             return Optional.of(cv);
                         } catch (Exception e) {
@@ -180,8 +193,8 @@ public class ClassificationModel {
 //        }).replay(1).autoConnect();
     }
 
-    private Observable<Optional<Map<DataEntity, Classifier.ClassificationResult>>> initClassificationResults(Observable<List<DataEntity>> labeledData,
-                                                             Observable<List<DataEntity>> unlabeledData, Observable<Boolean> updateEnabled) {
+    private Observable<Optional<Map<DataEntity, Classifier.ClassificationResult>>> initClassificationResults(Observable<Set<DataEntity>> labeledData,
+                                                             Observable<Set<DataEntity>> unlabeledData, Observable<Boolean> updateEnabled) {
 
         Observable<Boolean> enabledAndNecessary = Observable.combineLatest(updateEnabled, unlabeledData, (enabled, unlabeled) -> enabled && !unlabeled.isEmpty()).replay(1).autoConnect();
 
@@ -189,7 +202,7 @@ public class ClassificationModel {
                 .switchMapSingle(labeledEntities -> {
                     if (!labeledEntities.isEmpty()) {
                         log.debug("Preparing classifier for {} entities...", labeledEntities.size());
-                        WekaClassification classification = new WekaClassification(Schedulers.computation(), new HashSet<>(labeledEntities), labeledEntities.get(0).getFeatureSpace(), WEKA_CLASSIFIER_SUPPLIER);
+                        WekaClassification classification = new WekaClassification(Schedulers.computation(), new HashSet<>(labeledEntities), labeledEntities.iterator().next().getFeatureSpace(), WEKA_CLASSIFIER_SUPPLIER);
                         Single<Classifier> classifier = classification
                                 .result() // triggers training
                                 .doOnSubscribe(__ -> log.debug("Running Classification..."))

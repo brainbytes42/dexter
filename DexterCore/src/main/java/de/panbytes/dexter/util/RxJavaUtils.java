@@ -5,11 +5,8 @@ import io.reactivex.Observable;
 import io.reactivex.ObservableSource;
 import io.reactivex.ObservableTransformer;
 import io.reactivex.Single;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -78,11 +75,11 @@ public class RxJavaUtils {
     /**
      * Provide a filtering of an iterable input based on some observable contained in each iterable.
      * <ul>
-     * <li>The transformed Observable will provide a List containing all items for which the predicate evaluated to true on their extracted observable
+     * <li>The transformed Observable will provide a Set containing all items for which the predicate evaluated to true on their extracted observable
      * value.</li>
      * <li>The Observable will fire on each change in the original Iterable or any of the extracted observables, which means that consecutive emissions may be
      * identical ({@link Observable#distinctUntilChanged()} might be the right choice).</li>
-     * <li>For an empty input Iterable, an empty List will be emitted.</li>
+     * <li>For an empty input Iterable, an empty Set will be emitted.</li>
      * <li>If any of the deep Observables remains empty, nothing will be emitted, like for {@link Observable#combineLatest(Iterable,
      * io.reactivex.functions.Function, int)}!</li>
      * </ul>
@@ -91,7 +88,7 @@ public class RxJavaUtils {
      * @param <T> the iterable's item-type
      * @return an {@link ObservableTransformer} to be used in e.g. {@link Observable#compose(ObservableTransformer)}.
      */
-    public static <T> ObservableTransformer<Iterable<? extends T>, List<T>> deepFilter(
+    public static <T> ObservableTransformer<Iterable<? extends T>, Set<T>> deepFilter(
         Function<? super T, ? extends Observable<Boolean>> extractObservable) {
 
         return upstream -> upstream.compose(deepFilter(extractObservable, Boolean::booleanValue));
@@ -100,11 +97,11 @@ public class RxJavaUtils {
  /**
      * Provide a filtering of an iterable input based on some observable contained in each iterable.
      * <ul>
-     * <li>The transformed Observable will provide a List containing all items for which the predicate evaluated to true on their extracted observable
+     * <li>The transformed Observable will provide a Set containing all items for which the predicate evaluated to true on their extracted observable
      * value.</li>
      * <li>The Observable will fire on each change in the original Iterable or any of the extracted observables, which means that consecutive emissions may be
      * identical ({@link Observable#distinctUntilChanged()} might be the right choice).</li>
-     * <li>For an empty input Iterable, an empty List will be emitted.</li>
+     * <li>For an empty input Iterable, an empty Set will be emitted.</li>
      * <li>If any of the deep Observables remains empty, nothing will be emitted, like for {@link Observable#combineLatest(Iterable,
      * io.reactivex.functions.Function, int)}!</li>
      * </ul>
@@ -115,10 +112,10 @@ public class RxJavaUtils {
      * @param <P> the deep observable's type used by the predicate
      * @return an {@link ObservableTransformer} to be used in e.g. {@link Observable#compose(ObservableTransformer)}.
      */
-    public static <T, P> ObservableTransformer<Iterable<? extends T>, List<T>> deepFilter(
+    public static <T, P> ObservableTransformer<Iterable<? extends T>, Set<T>> deepFilter(
         Function<? super T, ? extends Observable<? extends P>> extractObservable, Predicate<? super P> predicate) {
 
-        return upstream -> upstream.compose(deepFilter(extractObservable, predicate, Collectors.toList()));
+        return upstream -> upstream.compose(deepFilter(extractObservable, predicate, Collectors.toSet()));
     }
 
     /**
@@ -145,8 +142,9 @@ public class RxJavaUtils {
         Function<? super T, ? extends Observable<? extends P>> extractObservable, Predicate<? super P> predicate, Collector<? super T, ?, R> collector) {
 
         return upstream -> upstream.switchMap(iterable -> RxJavaUtils.combineLatest(iterable,
-            item -> extractObservable.apply(item).map(value -> predicate.test(value) ? Optional.of(item) : Optional.<T>empty()))
-                                                                     .debounce(100, TimeUnit.MILLISECONDS)
+                                                                             item -> extractObservable.apply(item)
+                                                                                                      .map(value -> predicate.test(value) ? Optional.of(item) : Optional.<T>empty()))
+                                                                     .debounce(50, TimeUnit.MILLISECONDS)
                                                                      .map(presentItemsAreActive -> presentItemsAreActive.stream()
                                                                                                                         .filter(Optional::isPresent)
                                                                                                                         .map(Optional::get)

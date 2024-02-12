@@ -21,7 +21,7 @@ import java.util.stream.Stream;
 public final class FilterManager<T> {
 
     private static final Logger log = LoggerFactory.getLogger(FilterManager.class);
-    private final Observable<List<T>> output;
+    private final Observable<Set<T>> output;
     private final RxFieldCollection<Set<FilterModule<? super T>>, FilterModule<? super T>> filterModules = RxFieldCollection.withInitialValue(
         Collections.emptySet(), HashSet::new);
 
@@ -53,22 +53,18 @@ public final class FilterManager<T> {
 
                     // remove rejected items from result
                     return Observable.combineLatest(resultObservablesList,
-                        results -> Stream.of(results).map(obj -> (Optional<T>) obj).filter(Optional::isPresent).map(Optional::get).collect(Collectors.toList()))
-                                     .defaultIfEmpty(Collections.emptyList()); // default if no item is present (empty combineLatest!)
+                        results -> Stream.of(results).map(obj -> (Optional<T>) obj).filter(Optional::isPresent).map(Optional::get).collect(Collectors.toSet()))
+                                     .defaultIfEmpty(Collections.emptySet()); // default if no item is present (empty combineLatest!)
 
                 });
 
             })).debounce(500, TimeUnit.MILLISECONDS)
-                .distinctUntilChanged((ts1, ts2) -> {
-                    Collection<T> disjunction = CollectionUtils.disjunction(ts1, ts2);
-                    log.debug("FILTER: DISJUNCTION = {} ... {}", disjunction.size(), disjunction.stream().limit(10).collect(Collectors.toList()));
-                    return disjunction.isEmpty();
-                } /*to be order-invariant*/)
+                .distinctUntilChanged()
                 .replay(1).refCount();
 
     }
 
-    public Observable<List<T>> getOutput() {
+    public Observable<Set<T>> getOutput() {
         return output;
     }
 

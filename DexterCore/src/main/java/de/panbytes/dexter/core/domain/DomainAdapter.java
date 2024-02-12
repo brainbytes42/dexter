@@ -6,7 +6,6 @@ import de.panbytes.dexter.core.context.AppContext;
 import de.panbytes.dexter.core.data.ClassLabel;
 import de.panbytes.dexter.core.data.DataEntity;
 import de.panbytes.dexter.core.data.DataNode;
-import de.panbytes.dexter.core.data.DataNode.EnabledState;
 import de.panbytes.dexter.core.data.DataNode.Status;
 import de.panbytes.dexter.core.data.DataSource;
 import de.panbytes.dexter.core.data.DomainDataEntity;
@@ -41,7 +40,7 @@ public abstract class DomainAdapter extends Named.BaseImpl implements Named {
     private final AppContext appContext;
     private final RxField<Optional<FeatureSpace>> featureSpace = RxField.initiallyEmpty();
     private final Observable<Optional<DataSource>> rootDataSource;
-    private final Observable<List<DomainDataEntity>> domainData;
+    private final Observable<Set<DomainDataEntity>> domainData;
 
     private final CompositeDisposable disposable = new CompositeDisposable();
 
@@ -66,28 +65,31 @@ public abstract class DomainAdapter extends Named.BaseImpl implements Named {
         Assemble filteredDomainData: ( getDataSet + updatingFiltersList ) <- domainDataFilterFunction
          */
         // active domain data
-        Observable<List<DomainDataEntity>> oldDomainData = this.rootDataSource.switchMap(
-            dataSourceOptional -> dataSourceOptional.map(DataSource::getSubtreeDataEntities)
-                                                    .orElse(Observable.just(Collections.emptyList()))
-                                                    .switchMap(entities -> RxJavaUtils.combineLatest(entities, entity -> entity.getEnabledState()
-                                                                                                                               .toObservable()
-                                                                                                                               .map(state -> state.equals(
-                                                                                                                                   EnabledState.ACTIVE)
-                                                                                                                                   ? Optional.of(entity)
-                                                                                                                                   : Optional.<DomainDataEntity>empty())))
-                                                    .map(entityOpt -> entityOpt.stream()
-                                                                               .filter(Optional::isPresent)
-                                                                               .map(Optional::get)
-                                                                               .collect(Collectors.toList())))
-                                                                           .observeOn(Schedulers.io())
-                                                                           .replay(1)
-                                                                           .autoConnect(0)
-                                                                           .distinctUntilChanged();
-        this.domainData = this.rootDataSource.switchMap(dataSourceOpt -> dataSourceOpt.map(DataSource::getSubtreeDataEntities)
-                                                                                      .map(entities -> entities.compose(
-                                                                                          RxJavaUtils.deepFilter(DataNode::getStatus,
-                                                                                              status -> status == Status.ACTIVE)))
-                                                                                      .orElse(Observable.just(Collections.emptyList())))
+//        Observable<List<DomainDataEntity>> oldDomainData = this.rootDataSource.switchMap(
+//            dataSourceOptional -> dataSourceOptional.map(DataSource::getSubtreeDataEntities)
+//                                                    .orElse(Observable.just(Collections.emptyList()))
+//                                                    .switchMap(entities -> RxJavaUtils.combineLatest(entities, entity -> entity.getEnabledState()
+//                                                                                                                               .toObservable()
+//                                                                                                                               .map(state -> state.equals(
+//                                                                                                                                   EnabledState.ACTIVE)
+//                                                                                                                                   ? Optional.of(entity)
+//                                                                                                                                   : Optional.<DomainDataEntity>empty())))
+//                                                    .map(entityOpt -> entityOpt.stream()
+//                                                                               .filter(Optional::isPresent)
+//                                                                               .map(Optional::get)
+//                                                                               .collect(Collectors.toList())))
+//                                                                           .observeOn(Schedulers.io())
+//                                                                           .replay(1)
+//                                                                           .autoConnect(0)
+//                                                                           .distinctUntilChanged();
+        this.domainData = this.rootDataSource.observeOn(Schedulers.io())
+                                             .switchMap(dataSourceOpt -> dataSourceOpt.map(DataSource::getSubtreeDataEntities)
+                                                                                      .map(entities -> entities
+                                                                                              .doOnNext(domainDataEntities -> log.trace("RootDS has {} entities.", domainDataEntities.size()))
+                                                                                              .compose(RxJavaUtils.deepFilter(DataNode::getStatus,
+                                                                                                      status -> status == Status.ACTIVE))
+                                                                                              .doOnNext(domainDataEntities -> log.trace("RootDS has {} ACTIVE entities.", domainDataEntities.size())))
+                                                                                      .orElse(Observable.just(Collections.emptySet())))
                                              .distinctUntilChanged()
                                              .doOnNext(entities -> log.info("DomainAdapter provides {} DataEntities in total.", entities.size()))
                                              .replay(1)
@@ -104,15 +106,6 @@ public abstract class DomainAdapter extends Named.BaseImpl implements Named {
 
     }
 
-
-    private static Observable<List<DomainDataEntity>> filterLabeled(boolean labeled, List<DomainDataEntity> entities) {
-        return RxJavaUtils.combineLatest(entities, entity -> entity.getClassLabel()
-                                                                   .toObservable()
-                                                                   .map(labelOpt -> labelOpt.isPresent() == labeled ? Optional.of(entity)
-                                                                       : Optional.<DomainDataEntity>empty()))
-                          .debounce(100, TimeUnit.MILLISECONDS)
-                          .map(entityOpt -> entityOpt.stream().filter(Optional::isPresent).map(Optional::get).collect(Collectors.toList()));
-    }
 
     public AppContext getAppContext() {
         return this.appContext;
@@ -139,12 +132,8 @@ public abstract class DomainAdapter extends Named.BaseImpl implements Named {
      *
      * @return
      */
-    public Observable<List<DomainDataEntity>> getDomainData() {
+    public Observable<Set<DomainDataEntity>> getDomainData() {
         return this.domainData.hide();
-    }
-
-    public Observable<List<DomainDataEntity>> getDomainDataLabeled(boolean labeled) {
-        return this.domainData.switchMap(entities -> filterLabeled(labeled, entities)).hide();
     }
 
     public Observable<Set<ClassLabel>> getAllClassLabels() {
@@ -159,22 +148,6 @@ public abstract class DomainAdapter extends Named.BaseImpl implements Named {
                               .refCount();
     }
 
-    @Deprecated
-    public Observable<List<Optional<ClassLabel>>> getClassLabels() {
-        return getRootDataSource().switchMap(dataSourceOpt -> dataSourceOpt.map(dataSource -> {
-            return dataSource.getSubtreeDataEntities()
-                             .switchMap(entities -> RxJavaUtils.combineLatest(entities, e->e.getClassLabel().toObservable())
-                                                                         .debounce(100, TimeUnit.MILLISECONDS)
-                                                                         .map(optLabels -> optLabels.stream()
-                                                                                                    .distinct()
-                                                                                                    .sorted(Comparator.comparing(
-                                                                                                            optional -> optional.map(
-                                                                                                                    ClassLabel::getLabel)
-                                                                                                                                .orElse("")
-                                                                                                                                .toLowerCase()))
-                                                                                                    .collect(Collectors.toList())));
-        }).orElse(Observable.just(Collections.emptyList())));
-    }
 
     public Observable<Optional<Node>> getDomainInspectionView(DataEntity inspectionTarget) {
         return Observable.just(Optional.empty());

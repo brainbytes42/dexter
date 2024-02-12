@@ -1,8 +1,9 @@
 package de.panbytes.dexter.lib.dimension;
 
-import com.jujutsu.tsne.FastTSne;
+import com.google.common.base.Stopwatch;
+import com.jujutsu.tsne.*;
+import com.jujutsu.tsne.SimpleTSne;
 import com.jujutsu.tsne.TSne;
-import com.jujutsu.tsne.TSneConfiguration;
 import com.jujutsu.tsne.barneshut.BHTSne;
 import com.jujutsu.tsne.barneshut.ParallelBHTsne;
 import com.jujutsu.utils.TSneUtils;
@@ -21,8 +22,8 @@ import org.apache.commons.math3.stat.StatUtils;
 import org.apache.commons.math3.util.FastMath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import smile.feature.extraction.PCA;
 import smile.manifold.TSNE;
-import smile.projection.PCA;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -68,12 +69,13 @@ public class StochasticNeigborEmbedding extends DimensionMapping {
 
         private final double[][] inputMatrix;
         private final SimpleTSneContext context;
-        private TSne tsne;
+        private final TSne tsne;
 
         public BarnesHutTsneLibProcessor(double[][] inputMatrix, Context context) {
             super();
             this.inputMatrix = inputMatrix;
             this.context = (SimpleTSneContext) context; //TODO cast here?
+            this.tsne = new ParallelBHTsne();
         }
 
         @Override
@@ -95,50 +97,18 @@ public class StochasticNeigborEmbedding extends DimensionMapping {
 
                 @Override
                 protected double[][] runTask() throws Exception {
-                    int initial_dims = 30;
-
-                    boolean barnesHut = true;
-                    if (barnesHut) {
-                        boolean parallel = true;
-                        if (parallel) {
-                            tsne = new ParallelBHTsne();
-                        } else {
-                            tsne = new BHTSne();
-                        }
-                    } else {
-                        tsne = new FastTSne();
-                    }
-
-                    setMessage("normalizing...");
-
-                    RealMatrix normalized = MatrixUtils.createRealMatrix(inputMatrix);
-                    for (int i = 0; i < normalized.getColumnDimension(); i++) {
-                        double[] n = StatUtils.normalize(normalized.getColumn(i));
-                        if (Arrays.stream(n).anyMatch(Double::isNaN)) Arrays.fill(n, 0);
-                        normalized.setColumn(i, n);
-                    }
 
                     setMessage("preprocessing (PCA)...");
+                    log.trace("preprocessing (PCA) for {}x{}...", inputMatrix.length, inputMatrix[0].length);
+                    double[][] X = Preprocessing.pca(inputMatrix, 0.99);
 
-                    double[][] X;
-                    boolean fixed = false;
-                    if (fixed) {
-                        X = new PCA(normalized.getData()).setProjection(initial_dims).project(normalized.getData());
-                    } else {
-                        X = new PCA(normalized.getData()).setProjection(0.95).project(normalized.getData());
-                    }
-
-                    log.info("DATASET: (" + X.length + "x" + X[0].length + ")");
-
+                    int initial_dims_tsne = X.length;
 
                     setMessage("running t-SNE...");
+                    log.debug("Running {} for {} data entities, reducing {} dims to 2 and using Perplexity {}.", tsne.getClass().getSimpleName(), X.length, initial_dims_tsne, context.perplexity);
 
-                    log.debug("Running {} for {} data entities, reducing {} dims to 2 and using Perplexity {}.", tsne.getClass().getSimpleName(), X.length, initial_dims, context.perplexity);
-
-                    TSneConfiguration config = TSneUtils.buildConfig(X, 2, initial_dims, context.perplexity, 1000, false, 0.5, false);
-                    double[][] Y = tsne.tsne(config);
-
-                    return Y;
+                    TSneConfiguration config = TSneUtils.buildConfig(X, 2, initial_dims_tsne, context.perplexity, 1000, false, 0.5, false);
+                    return tsne.tsne(config);
                 }
             };
 
@@ -235,26 +205,9 @@ public class StochasticNeigborEmbedding extends DimensionMapping {
 
             // TODO remove shortcut
             if (true) {
-                double[][] project = new PCA(normalizedInput.getData()).setProjection(0.95).project(normalizedInput.getData());
+                double[][] project = PCA.fit(normalizedInput.getData()).getProjection(0.95).apply(normalizedInput.getData());
                 System.out.println("dims: " + project[0].length);
-                boolean smile = true;
-                if (smile) {
-                    tsne = new InitSmileTSNE(project, new PCA(project).setProjection(2).project(project), 2, targetPerplexity, 200, 1);
-                    int maxIter = 1000;
-                    for (int iter = 0; iter < maxIter; iter++) {
-                        intermediateResult = new double[tsne.getCoordinates().length][];
-                        for (int i = 0; i < tsne.getCoordinates().length; i++) {
-                            intermediateResult[i] = Arrays.copyOf(tsne.getCoordinates()[i], tsne.getCoordinates()[i].length);
-                        }
-                        notifyNewIntermediateResult();
-                        tsne.learn(1);
-                        if ((iter + 1) % 50 == 0) {
-                            System.out.println("t-SNE " + (iter + 1) + "/" + maxIter);
-                        }
-                    }
-                    return tsne.getCoordinates();
-                } else {
-                    // limit precision
+                                    // limit precision
                     int p = 6;
                     for (int i = 0; i < project.length; i++) {
                         for (int j = 0; j < project[i].length; j++) {
@@ -265,10 +218,10 @@ public class StochasticNeigborEmbedding extends DimensionMapping {
                     FastTSne tSne = new FastTSne();
                     double[][] result = tSne.tsne(TSneUtils.buildConfig(project, 2, 30, 20, 1000));
                     return result;
-                }
+
             }
             //
-            //            SingularValueDecomposition singularValueDecomposition = new SingularValueDecomposition(normalizedInput);
+//                        SingularValueDecomposition singularValueDecomposition = new SingularValueDecomposition(normalizedInput);
             //            System.out.println(Arrays.toString(singularValueDecomposition.getSingularValues()));
             //            System.exit(0);
 
@@ -281,11 +234,11 @@ public class StochasticNeigborEmbedding extends DimensionMapping {
             //	at smile.math.matrix.JMatrix.eigen(JMatrix.java:1353)
             //	at smile.projection.PCA.<init>(PCA.java:173)
             //	at smile.projection.PCA.<init>(PCA.java:107)
-            PCA pca = new PCA(normalizedInput.getData());
-            System.out.println("PCA: " + Arrays.toString(pca.getVarianceProportion()));
-            pca.setProjection(0.95);
-            System.out.println("PCA: " + Arrays.toString(pca.getVarianceProportion()));
-            double[][] pcaResults = pca.project(normalizedInput.getData());
+            PCA pca = PCA.fit(normalizedInput.getData());
+            System.out.println("PCA: " + Arrays.toString(pca.varianceProportion()));
+            pca = pca.getProjection(0.95);
+            System.out.println("PCA: " + Arrays.toString(pca.varianceProportion()));
+            double[][] pcaResults = pca.apply(normalizedInput.getData());
             // TODO (bypass pca):
             //            double[][] pcaResults = normalizedInput.getData();
             System.out.println("PCA-DIM_output: " + pcaResults[0].length);
@@ -298,7 +251,7 @@ public class StochasticNeigborEmbedding extends DimensionMapping {
             if (initialSolution == null) {
                 boolean usePcaForInit = true;
                 if (usePcaForInit) {
-                    initialSolution = new PCA(normalizedInput.getData()).setProjection(2).project(normalizedInput.getData());
+                    initialSolution = PCA.fit(normalizedInput.getData()).getProjection(2).apply(normalizedInput.getData());
                 } else {
                     initialSolution = Stream.generate(() -> DoubleStream.generate(RANDOM_GAUSSIAN::nextNormalizedDouble)
                                                                         .map(val -> val * 0.0001)

@@ -23,7 +23,7 @@
 		<appender-ref ref="FILE" />
 	</root>
 
-	<logger name="de.panbytes.dexter" level="DEBUG" />
+	<logger name="de.panbytes.dexter" level="TRACE" />
 <!--	<logger name="de.panbytes.dexter.ext.task" level="TRACE" />-->
 	<logger name="smile" level="INFO" />
 

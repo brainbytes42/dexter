@@ -385,7 +385,7 @@ public class ModelExportPlugin extends DexterPlugin {
                             (Supplier<Table<String, String, Consumer<DataEntity>>>) HashBasedTable::create));
 
             Optional<DataSource> rootDS = domainAdapter.getRootDataSource().blockingFirst();
-            List<DomainDataEntity> currentDataEntities = rootDS.map(DataSource::getSubtreeDataEntities).map(Observable::blockingFirst).orElse(Collections.emptyList());
+            Set<DomainDataEntity> currentDataEntities = rootDS.map(DataSource::getSubtreeDataEntities).map(Observable::blockingFirst).orElse(Collections.emptySet());
 
             for (DomainDataEntity dataEntity : currentDataEntities) {
                 Optional.ofNullable(applyChangesTable.get(dataEntity.getGeneratingDataSource().getName().getValue(), dataEntity.getName().getValue()))

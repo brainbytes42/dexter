@@ -41,6 +41,8 @@ import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
 import javafx.util.converter.PercentageStringConverter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.text.Collator;
@@ -52,6 +54,8 @@ import java.util.stream.Collectors;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 public class ModelQualityView extends Application {
+
+    private static final Logger log = LoggerFactory.getLogger(ModelQualityView.class);
 
     //private final Observable<Optional<CrossValidation.CrossValidationResult>> crossValidationResults;
     private final DexterCore dexterCore;
@@ -391,6 +395,7 @@ public class ModelQualityView extends Application {
                                                                                                                                            label -> label,
                                                                                                                                            Collectors.counting()))))
                                                     .debounce(100, TimeUnit.MILLISECONDS)
+                                                    .doOnNext(classLabelCount -> log.trace("ClassLabelCount is {}.", classLabelCount))
                                                     .subscribe(classLabelCount -> {
 
                                                         final ObservableList<XYChart.Data<Number, String>> dataList = classLabelCount.entrySet()
@@ -538,7 +543,7 @@ public class ModelQualityView extends Application {
 
                         // make confusion table inspectable (show InspectionViews for respective entities)
                         JavaFxObservable.eventsOf(cell, MouseEvent.MOUSE_CLICKED)
-                                .throttleFirst(2,TimeUnit.SECONDS) // prevent double-click
+                                .throttleFirst(1,TimeUnit.SECONDS) // prevent double-click
                                 .map(actionEvent -> modelEvaluation.getCrossValidationResult().getClassificationResults())
                                 .map(cvResults -> {
                                     Comparator<DataEntity> comparator = Comparator.comparingDouble(dataEntity1 -> this.dexterCore.getDexterModel().getActiveLearningModel().getExistingLabelsUncertainty().blockingFirst().stream().filter(cvUncertainty -> cvUncertainty.getDataEntity().equals(dataEntity1)).findAny().map(ActiveLearningModel.CrossValidationUncertainty::getUncertaintyValue).orElse(1.0));

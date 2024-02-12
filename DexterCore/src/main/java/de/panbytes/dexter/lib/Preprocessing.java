@@ -1,17 +1,18 @@
 package de.panbytes.dexter.lib;
 
-import org.apache.commons.math3.linear.EigenDecomposition;
-import org.apache.commons.math3.linear.MatrixUtils;
-import org.apache.commons.math3.linear.RealMatrix;
-import org.apache.commons.math3.linear.RealVector;
+import org.apache.commons.math3.linear.*;
 import org.apache.commons.math3.stat.StatUtils;
 import org.apache.commons.math3.stat.correlation.Covariance;
 import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 import java.util.stream.IntStream;
 
 public class Preprocessing {
+
+    private static final Logger log = LoggerFactory.getLogger(Preprocessing.class);
 
     public static double[][] normalize(double[][] inputMatrix) {
 
@@ -46,26 +47,40 @@ public class Preprocessing {
         return outputMatrix;
     }
 
-    @Deprecated
-    public static double[][] pca(double[][] inputMatrix) {
+    /**
+     * normalize and apply PCA
+     */
+    public static double[][] pca(double[][] inputData, double outputVariancePercent) {
 
-        RealMatrix realMatrix = MatrixUtils.createRealMatrix(inputMatrix);
+        RealMatrix inputMatrix = MatrixUtils.createRealMatrix(inputData);
+        log.trace("InputMatrix PCA: {}x{} (rowxcol)", inputMatrix.getRowDimension(), inputMatrix.getColumnDimension());
 
-        //create covariance matrix of points, then find eigen vectors
+        RealMatrix normalizedInput = normalize(inputMatrix);
+
+        //create covariance matrix of points, then find eigen vectors (using SVD, which is used mostly for this)
         //see https://stats.stackexchange.com/questions/2691/making-sense-of-principal-component-analysis-eigenvectors-eigenvalues
 
-        Covariance covariance = new Covariance(realMatrix);
+        Covariance covariance = new Covariance(normalizedInput);
         RealMatrix covarianceMatrix = covariance.getCovarianceMatrix();
-        EigenDecomposition ed = new EigenDecomposition(covarianceMatrix);
+        SingularValueDecomposition svd = new SingularValueDecomposition(covarianceMatrix);
 
-        double eigenvaluesSum = 0;
-        for (int i = 0; i < ed.getRealEigenvalues().length; i++) {
-            eigenvaluesSum+=ed.getRealEigenvalue(i);
+        double[] eigenValues = svd.getSingularValues();
+        RealMatrix eigenVectors = svd.getV();
+
+        double sumEV = Arrays.stream(eigenValues).sum();
+
+        double sum = 0;
+        int lastVectorToUse=0;
+        while (lastVectorToUse < eigenValues.length) {
+            sum += eigenValues[lastVectorToUse];
+            if(sum >= sumEV* outputVariancePercent) break;
+            lastVectorToUse++;
         }
-        double[] eigenvaluesAggregatingSums = new double[ed.getRealEigenvalues().length];
 
+        RealMatrix eigenVectorsSelected = eigenVectors.getSubMatrix(0, eigenValues.length-1, 0, lastVectorToUse);
 
-        //        ed.
-        return inputMatrix; //TODO
+        // https://machinelearningmastery.com/calculate-principal-component-analysis-scratch-python/
+        RealMatrix result = eigenVectorsSelected.transpose().multiply(normalizedInput.transpose());
+        return result.transpose().getData();
     }
 }

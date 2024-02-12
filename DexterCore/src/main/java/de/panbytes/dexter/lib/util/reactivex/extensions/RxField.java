@@ -1,7 +1,9 @@
 package de.panbytes.dexter.lib.util.reactivex.extensions;
 
 import io.reactivex.Observable;
+import io.reactivex.Scheduler;
 import io.reactivex.functions.BiPredicate;
+import io.reactivex.schedulers.Schedulers;
 import io.reactivex.subjects.BehaviorSubject;
 import io.reactivex.subjects.Subject;
 

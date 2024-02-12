@@ -277,6 +277,7 @@ public class MainView {
                                               .observeOn(Schedulers.io())
                                               .switchMap(entities -> // set of current class labels from data entities
                                                   RxJavaUtils.combineLatest(entities, DataEntity::classLabelObs).map(HashSet::new).distinctUntilChanged())
+                                              .doOnNext(currentLabels -> log.trace("Current Labels: {}", currentLabels))
                                               .map(currentLabels -> //
                                                   currentLabels.stream() //
                                                                // get (or create) check boxes for the current class labels
@@ -382,7 +383,7 @@ public class MainView {
                         .subscribe(leastConfident -> InspectionView.createAndShow(this.dexterCore, leastConfident));
 
         JavaFxObservable.actionEventsOf(this.pickUnlabeledMultiButton)
-                        .throttleFirst(2,TimeUnit.SECONDS) // prevent double-click
+                        .throttleFirst(1,TimeUnit.SECONDS) // prevent double-click
                         .switchMap(actionEvent -> this.dexterModel.getActiveLearningModel().getClassificationUncertainty().firstElement().toObservable())
                         // TODO: isInspected() isn't used currently
                         // .map(list->list.stream().filter(uncertainty->uncertainty.getDataEntity().isInspected().blockingFirst()).findFirst())
@@ -395,7 +396,7 @@ public class MainView {
         /*
         Active Learning: Check Label
          */
-        ConnectableObservable<List<CrossValidationUncertainty>> uncheckedUncertainties = Observable.combineLatest(
+        ConnectableObservable<Set<CrossValidationUncertainty>> uncheckedUncertainties = Observable.combineLatest(
             this.dexterModel.getActiveLearningModel().getExistingLabelsUncertainty(), this.appContext.getInspectionHistory().getLabeledEntities(),
             (crossValidationUncertainties, checkedEntities) -> crossValidationUncertainties.stream()
                                                                                            .filter(Predicates.compose(checkedEntities::contains,
@@ -419,7 +420,7 @@ public class MainView {
                         .subscribe(leastConfident -> InspectionView.createAndShow(this.dexterCore, leastConfident));
 
         JavaFxObservable.actionEventsOf(this.checkLabelMultiButton)
-                        .throttleFirst(2,TimeUnit.SECONDS) // prevent double-click
+                        .throttleFirst(1,TimeUnit.SECONDS) // prevent double-click
                         .withLatestFrom(uncheckedUncertainties, (actionEvent, crossValidationUncertainties) -> crossValidationUncertainties)
                         // TODO: isInspected() isn't used currently
                         // .map(list->list.stream().filter(uncertainty->uncertainty.getDataEntity().isInspected().blockingFirst()).findFirst())
@@ -512,7 +513,7 @@ public class MainView {
         Observable<ObservableList<Series<Double, Double>>> chartDataObs = this.dexterModel.getVisualizationModel()
                                                                                           .getLowDimData()
                                                                                           .observeOn(Schedulers.io())
-                                                                                          .sample(200, TimeUnit.MILLISECONDS, true)
+                                                                                          .sample(250, TimeUnit.MILLISECONDS, true)
                                                                                           .switchMap(entityMappingMap -> {
 
                                                                                               if (entityMappingMap.size() == 0) {
@@ -530,7 +531,7 @@ public class MainView {
                                                                                                       .collect(Collectors.toList());
                                                                                                   return Observable.merge(
                                                                                                       labelObservables) // just another trigger for re-calculation
-                                                                                                                   .debounce(200, TimeUnit.MILLISECONDS)
+                                                                                                                   .debounce(250, TimeUnit.MILLISECONDS)
                                                                                                                    .doOnNext(__ -> innerDisposables.clear())
                                                                                                                    .map(__ -> entityMappingMap.entrySet()
                                                                                                                                               .stream()
